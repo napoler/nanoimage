@@ -1,0 +1,20 @@
+[package]
+name = "nanoimage-cli"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+
+[[bin]]
+name = "nanoimage"
+path = "src/main.rs"
+
+[dependencies]
+nanoimage-core = { path = "../nanoimage-core" }
+clap = { workspace = true }
+tokio = { workspace = true }
+anyhow = { workspace = true }
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true }
+walkdir = { workspace = true }
+dirs = "5"
