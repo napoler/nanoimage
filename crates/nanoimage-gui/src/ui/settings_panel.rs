@@ -125,10 +125,6 @@ impl SettingsPanel {
     pub fn config(&self) -> &OptimizerConfig {
         &self.config
     }
-
-    pub fn config_mut(&mut self) -> &mut OptimizerConfig {
-        &mut self.config
-    }
 }
 
 impl Default for SettingsPanel {

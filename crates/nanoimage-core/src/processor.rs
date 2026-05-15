@@ -49,6 +49,35 @@ impl BatchProcessor {
             .collect()
     }
 
+    /// 串行处理 (同步) 带进度回调
+    pub fn process_sync_with_progress<F>(&self, files: &[PathBuf], on_progress: F) -> u64
+    where
+        F: Fn(Progress),
+    {
+        let total = files.len();
+        let mut total_saved: u64 = 0;
+
+        for (idx, path) in files.iter().enumerate() {
+            let result = self.optimizer.process_file(path);
+            let progress = Progress {
+                current: idx + 1,
+                total,
+                current_file: path.file_name()
+                    .map(|n| n.to_string_lossy().to_string())
+                    .unwrap_or_default(),
+                bytes_processed: result.original_size,
+                bytes_saved: result.savings.max(0) as u64,
+            };
+            on_progress(progress);
+
+            if result.success {
+                total_saved += result.savings.max(0) as u64;
+            }
+        }
+
+        total_saved
+    }
+
     /// 并行处理 (tokio)
     pub async fn process_async(
         &self,
