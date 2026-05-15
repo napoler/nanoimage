@@ -207,7 +207,7 @@ mod tests {
     fn test_image_format_detection() {
         assert_eq!(ImageFormat::from_path(Path::new("test.jpg")), ImageFormat::Jpeg);
         assert_eq!(ImageFormat::from_path(Path::new("test.PNG")), ImageFormat::Png);
-        assert_eq!(ImageFormat::from_path(Path::new("test.webp")), ImageFormat::Webp);
+        assert_eq!(ImageFormat::from_path(Path::new("test.webp")), ImageFormat::WebP);
     }
 
     #[test]

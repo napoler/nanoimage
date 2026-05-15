@@ -1,6 +1,6 @@
 //! CLI 子命令 - batch
 use crate::commands::common::load_config;
-use crate::commands::output::{success, error, dot, checkmark, file_success, file_error};
+use crate::commands::output::{success, error, dot, file_error};
 use anyhow::Result;
 use std::path::PathBuf;
 use nanoimage_core::BatchProcessor;

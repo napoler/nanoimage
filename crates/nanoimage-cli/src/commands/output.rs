@@ -3,6 +3,7 @@ use std::io::Write;
 
 /// 输出颜色
 #[derive(Clone, Copy)]
+#[allow(dead_code)]
 pub enum Color {
     Green,
     Yellow,
@@ -42,6 +43,7 @@ pub fn success(msg: &str) {
 }
 
 /// 警告消息 (黄色)
+#[allow(dead_code)]
 pub fn warn(msg: &str) {
     println_color(Color::Yellow, msg);
 }
@@ -63,11 +65,13 @@ pub fn dot() {
 }
 
 /// 进度完成符号 (绿色勾)
+#[allow(dead_code)]
 pub fn checkmark() {
     print_color(Color::Green, "✓");
 }
 
 /// 文件处理成功
+#[allow(dead_code)]
 pub fn file_success(name: &str, orig_size: &str, new_size: &str, savings: f64) {
     print!("{} ", Color::Green.as_str());
     print!("✓ ");
