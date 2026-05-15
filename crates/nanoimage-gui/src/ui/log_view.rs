@@ -13,7 +13,6 @@ pub struct LogEntry {
 pub enum LogLevel {
     Info,
     Success,
-    Warning,
     Error,
 }
 
@@ -49,11 +48,6 @@ impl LogPanel {
         self.log(msg, LogLevel::Success);
     }
 
-    /// 添加警告日志
-    pub fn warn(&mut self, msg: String) {
-        self.log(msg, LogLevel::Warning);
-    }
-
     /// 添加错误日志
     pub fn error(&mut self, msg: String) {
         self.log(msg, LogLevel::Error);
@@ -75,7 +69,6 @@ impl LogPanel {
                     let icon = match entry.level {
                         LogLevel::Info => "ℹ️",
                         LogLevel::Success => "✅",
-                        LogLevel::Warning => "⚠️",
                         LogLevel::Error => "❌",
                     };
                     ui.horizontal(|ui| {
