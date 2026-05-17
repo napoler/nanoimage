@@ -104,7 +104,18 @@ impl Optimizer {
 
         // 默认: 同目录下的 optimized 子文件夹
         let parent = input_path.parent().unwrap_or(Path::new("."));
-        parent.join("optimized").join(input_path.file_name().unwrap_or_default())
+        let base = parent.join("optimized").join(input_path.file_name().unwrap_or_default());
+        // Strip leading "./" for cleaner paths
+        if let Ok(stripped) = base.strip_prefix("./") {
+            PathBuf::from(stripped)
+        } else {
+            base
+        }
+    }
+
+    /// Test helper: expose determine_output_path for testing
+    pub fn determine_output_path_test(&self, input_path: &Path) -> PathBuf {
+        self.determine_output_path(input_path)
     }
 
     /// 处理 JPEG

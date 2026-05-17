@@ -96,11 +96,10 @@ impl FilePanel {
                 ui.label(format!("📁 {} 个文件", self.files.len()));
             }
 
-            if !self.files.is_empty() {
-                if ui.button("清空").clicked() {
+            if !self.files.is_empty()
+                && ui.button("清空").clicked() {
                     self.clear();
                 }
-            }
         });
     }
 
