@@ -333,27 +333,13 @@ rustflags = ["-C", "target-feature=-crt-static"]
 
 | 迭代 | 任务 | 验证方式 |
 |------|------|----------|
-| 0 | ~~Bug 修复 + 警告清理~~ | ~~`cargo build` 零警告, 64 tests pass~~ ✅ |
-| 1 | ~~项目初始化 + workspace 结构~~ | ~~`cargo build` 通过~~ ✅ |
-| 2 | nanoimage-core 基础 (image crate) | 加载/保存 JPG/PNG |
-| 3 | 图像优化器核心实现 | 单元测试通过 |
-| 4 | oxipng PNG 压缩集成 | 压缩效果对比 |
-| 5 | mozjpeg JPG 压缩集成 | 压缩效果对比 |
-| 6 | CLI 基本框架 (clap) | `--help` 正常 |
-| 7 | CLI compress 子命令 | 单文件测试 |
-| 8 | CLI batch 子命令 | 批量处理测试 |
-| 9 | CLI convert 子命令 | 格式转换测试 |
-| 10 | CLI 彩色输出 | 日志可见性 |
-| 11 | eframe 基础窗口 | 窗口显示 |
-| 12 | 文件选择/拖拽 UI | 拖拽响应 |
-| 13 | 设置面板 UI | 配置生效 |
-| 14 | 进度条/日志 UI | 实时更新 |
-| 15 | GUI + Core 集成 | 完整流程测试 |
-| 16 | 配置持久化 (serde) | 重启后配置保留 |
-| 17 | 国际化 (i18n) | 多语言切换 |
-| 18 | 主题支持 (暗/亮) | 主题切换 |
-| 19 | 性能基准测试 | criterion 报告 |
-| 20 | 跨平台构建测试 | 多平台运行 |
+| 0 | ~~Bug 修复 + 警告清理~~ | ~~`cargo build` 零警告, 72 tests pass~~ ✅ |
+| 1 | ~~补充核心测试 (72 tests)~~ | ~~`cargo test` 72 tests pass~~ ✅ |
+| 2 | ~~CLI batch 完善 (--format/--max-width/--max-height/--dry-run/结果表格)~~ | ~~`cargo build` 零警告, 72 tests pass~~ ✅ |
+| 3 | GUI 集成完善 | 处理结果更新文件面板 |
+| 4 | 配置持久化 | 启动时加载上次配置 |
+| 5 | 错误处理与用户体验 | 跳过失败文件选项 |
+| 6 | 性能基准测试 | criterion 报告 |
 
 ---
 
@@ -380,5 +366,5 @@ rustflags = ["-C", "target-feature=-crt-static"]
 
 ---
 
-*文档状态: 迭代 0 完成 (Bug 修复 + 警告清理) + 迭代 1 完成 (补充核心测试)。编译零警告，72 tests pass。迭代 1 新增: JPEG/PNG/WebP 压缩测试、格式不支持测试、配置序列化测试、批量处理进度回调测试。迭代 2-5 进行中*
-*完成度: 迭代 1/20 (5%)*
+*文档状态: 迭代 0 (Bug修复+警告清理) ✅ + 迭代 1 (核心测试72个) ✅ + 迭代 2 (CLI batch完善: --format/--max-width/--max-height/--dry-run/结果表格) ✅。编译零警告，72 tests pass。迭代 3-6 待开发*
+*完成度: 迭代 3/7 (43%)*
