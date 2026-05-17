@@ -86,3 +86,88 @@ pub fn file_error(name: &str, err: &str) {
     eprint!("{}", Color::Reset.as_str());
     eprintln!(" {}: {}", name, err);
 }
+
+/// 打印表格（使用 Unicode 边框）
+pub fn print_table(headers: &[&str], rows: Vec<Vec<String>>) {
+    if rows.is_empty() {
+        return;
+    }
+
+    /// 计算字符串的显示宽度（CJK 字符算 2 列宽）
+    fn display_width(s: &str) -> usize {
+        s.chars().map(|c| {
+            if c as u32 > 0x2FF && c as u32 != 0x3030 {
+                2
+            } else {
+                1
+            }
+        }).sum()
+    }
+
+    let num_cols = headers.len();
+    // 计算每列最大显示宽度
+    let mut col_widths: Vec<usize> = headers.iter().map(|h| display_width(h)).collect();
+
+    for row in &rows {
+        for (i, cell) in row.iter().enumerate() {
+            if i < num_cols {
+                col_widths[i] = col_widths[i].max(display_width(cell));
+            }
+        }
+    }
+
+    // 确保最小列宽（至少和表头一样宽）
+    for (i, h) in headers.iter().enumerate() {
+        if col_widths[i] < display_width(h) {
+            col_widths[i] = display_width(h);
+        }
+    }
+
+    // 添加 padding
+    let padding: usize = 2;
+
+    // 构建分隔行（┼ 占 1 列宽，所以 dashes 少 1）
+    let mut sep = String::from("├");
+    for &w in &col_widths {
+        sep.push_str(&"─".repeat(w + padding * 2 - 1));
+        sep.push_str("┼");
+    }
+
+    // 打印表头
+    print!("┌");
+    for &w in &col_widths {
+        print!("{}", "─".repeat(w + padding * 2 - 1));
+        print!("┬");
+    }
+    println!("┐");
+
+    print!("│");
+    for (i, h) in headers.iter().enumerate() {
+        let w = col_widths[i];
+        let h_width = display_width(h);
+        print!(" {}{} ", h, " ".repeat(w - h_width));
+    }
+    println!("│");
+
+    // 分隔线
+    println!("{}", sep);
+
+    // 打印行
+    for row in &rows {
+        print!("│");
+        for (i, cell) in row.iter().enumerate() {
+            let w = if i < col_widths.len() { col_widths[i] } else { display_width(cell) };
+            let c_width = display_width(cell);
+            print!(" {}{} ", cell, " ".repeat(w - c_width));
+        }
+        println!("│");
+    }
+
+    // 底部
+    print!("└");
+    for &w in &col_widths {
+        print!("{}", "─".repeat(w + padding * 2 - 1));
+        print!("┴");
+    }
+    println!("┘");
+}
