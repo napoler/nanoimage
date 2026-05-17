@@ -56,6 +56,10 @@ pub fn execute(args: Args) -> Result<()> {
     let result = optimizer.process_file(&args.input);
 
     if result.success {
+        // 如果输出路径不匹配，重命名文件以匹配用户指定的输出路径
+        if result.output_path != args.output {
+            std::fs::rename(&result.output_path, &args.output)?;
+        }
         success(&format!("✓ 转换完成: {} → {}", args.input.display(), args.output.display()));
     } else {
         error(&format!("✗ 转换失败: {}", result.error.unwrap_or_default()));

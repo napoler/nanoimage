@@ -17,7 +17,7 @@ pub enum OutputFormat {
 impl OutputFormat {
     pub fn as_str(&self) -> &'static str {
         match self {
-            OutputFormat::KeepOriginal => "keep",
+            OutputFormat::KeepOriginal => "keeporiginal",
             OutputFormat::Jpeg => "jpg",
             OutputFormat::Png => "png",
             OutputFormat::WebP => "webp",

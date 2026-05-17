@@ -3,7 +3,7 @@ use crate::commands::common::load_config;
 use crate::commands::output::{success, error};
 use anyhow::Result;
 use std::path::PathBuf;
-use nanoimage_core::Optimizer;
+use nanoimage_core::{format_size, Optimizer};
 
 #[derive(clap::Parser)]
 pub struct Args {
@@ -55,17 +55,4 @@ pub fn execute(args: Args) -> Result<()> {
     }
 
     Ok(())
-}
-
-fn format_size(bytes: u64) -> String {
-    const KB: u64 = 1024;
-    const MB: u64 = KB * 1024;
-
-    if bytes >= MB {
-        format!("{:.2} MB", bytes as f64 / MB as f64)
-    } else if bytes >= KB {
-        format!("{:.2} KB", bytes as f64 / KB as f64)
-    } else {
-        format!("{} B", bytes)
-    }
 }

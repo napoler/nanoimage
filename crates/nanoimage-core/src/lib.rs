@@ -10,6 +10,7 @@ pub mod processor;
 pub use config::{OptimizerConfig, OutputFormat, Quality, CompressionMode};
 pub use optimizer::{Optimizer, ProcessResult};
 pub use processor::{BatchProcessor, Progress};
+pub use formats::format_size;
 
 /// 图像格式
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

@@ -49,7 +49,7 @@ fn test_effective_quality_smart_custom_lossy() {
 /// Test OutputFormat::as_str() returns correct strings for all variants
 #[test]
 fn test_output_format_as_str_keep_original() {
-    assert_eq!(OutputFormat::KeepOriginal.as_str(), "keep");
+    assert_eq!(OutputFormat::KeepOriginal.as_str(), "keeporiginal");
 }
 
 #[test]

@@ -78,6 +78,41 @@ impl BatchProcessor {
         total_saved
     }
 
+    /// 串行处理 (同步) 返回进度和结果
+    pub fn process_sync_with_results<F>(
+        &self,
+        files: &[PathBuf],
+        on_progress: F,
+    ) -> (u64, Vec<crate::optimizer::ProcessResult>)
+    where
+        F: Fn(Progress),
+    {
+        let total = files.len();
+        let mut total_saved: u64 = 0;
+        let mut results = Vec::with_capacity(files.len());
+
+        for (idx, path) in files.iter().enumerate() {
+            let result = self.optimizer.process_file(path);
+            let progress = Progress {
+                current: idx + 1,
+                total,
+                current_file: path.file_name()
+                    .map(|n| n.to_string_lossy().to_string())
+                    .unwrap_or_default(),
+                bytes_processed: result.original_size,
+                bytes_saved: result.savings.max(0) as u64,
+            };
+            on_progress(progress);
+
+            if result.success {
+                total_saved += result.savings.max(0) as u64;
+            }
+            results.push(result);
+        }
+
+        (total_saved, results)
+    }
+
     /// 并行处理 (tokio)
     pub async fn process_async(
         &self,
@@ -114,8 +149,19 @@ impl BatchProcessor {
 
         let mut results = Vec::with_capacity(handles.len());
         for handle in handles {
-            if let Ok(result) = handle.await {
-                results.push(result);
+            match handle.await {
+                Ok(result) => results.push(result),
+                Err(e) => {
+                    results.push(crate::optimizer::ProcessResult {
+                        original_path: PathBuf::from("unknown"),
+                        output_path: PathBuf::from("unknown"),
+                        original_size: 0,
+                        new_size: 0,
+                        savings: 0,
+                        success: false,
+                        error: Some(format!("Task panicked: {}", e)),
+                    });
+                }
             }
         }
         results

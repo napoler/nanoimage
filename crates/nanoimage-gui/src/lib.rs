@@ -2,7 +2,7 @@
 mod ui;
 
 use eframe::egui;
-use nanoimage_core::{BatchProcessor, OptimizerConfig, Progress};
+use nanoimage_core::{format_size, BatchProcessor, FileStatus, OptimizerConfig, ProcessResult, Progress};
 use std::path::PathBuf;
 use std::sync::mpsc::{self, Receiver};
 use std::thread;
@@ -12,7 +12,7 @@ use ui::{file_panel::FilePanel, settings_panel::SettingsPanel, progress::Progres
 /// 消息类型：后台线程向UI线程发送的消息
 enum WorkerMsg {
     Progress(Progress),
-    Done(u64), // total_saved
+    Completed(Vec<ProcessResult>),
 }
 
 /// 主应用
@@ -86,12 +86,11 @@ impl NanoImageApp {
         // 启动后台线程
         let _handle = thread::spawn(move || {
             let processor = BatchProcessor::with_config(config);
-            let total_saved = processor.process_sync_with_progress(&files, &|progress| {
+            let (_total_saved, results) = processor.process_sync_with_results(&files, &|progress| {
                 tx.send(WorkerMsg::Progress(progress)).ok();
-                // 发送每个文件的结果
             });
 
-            tx.send(WorkerMsg::Done(total_saved)).ok();
+            tx.send(WorkerMsg::Completed(results)).ok();
         });
     }
 
@@ -113,11 +112,31 @@ impl NanoImageApp {
                             self.file_panel.update_status(&path, nanoimage_core::FileStatus::Processing, None);
                         }
                     }
-                    WorkerMsg::Done(total_saved) => {
+                    WorkerMsg::Completed(results) => {
+                        let mut total_saved: u64 = 0;
+                        for result in results {
+                            if result.success {
+                                total_saved += result.savings.max(0) as u64;
+                                self.file_panel.update_status(
+                                    &result.original_path,
+                                    FileStatus::Completed,
+                                    Some(result.new_size),
+                                );
+                            } else {
+                                self.file_panel.update_status(
+                                    &result.original_path,
+                                    FileStatus::Error(
+                                        result.error.unwrap_or_else(|| "Unknown error".to_string()),
+                                    ),
+                                    None,
+                                );
+                            }
+                        }
                         self.processing = false;
                         self.progress = 100.0;
                         self.progress_panel.reset();
-                        self.log_panel.success(format!("处理完成! 共节省 {}", format_size(total_saved)));
+                        self.log_panel
+                            .success(format!("处理完成! 共节省 {}", format_size(total_saved)));
                         self.worker_rx = None;
                         break;
                     }
@@ -208,18 +227,5 @@ impl eframe::App for NanoImageApp {
         if self.processing {
             ctx.request_repaint();
         }
-    }
-}
-
-fn format_size(bytes: u64) -> String {
-    const KB: u64 = 1024;
-    const MB: u64 = KB * 1024;
-
-    if bytes >= MB {
-        format!("{:.2} MB", bytes as f64 / MB as f64)
-    } else if bytes >= KB {
-        format!("{:.2} KB", bytes as f64 / KB as f64)
-    } else {
-        format!("{} B", bytes)
     }
 }
