@@ -213,17 +213,147 @@ impl Optimizer {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::{CompressionMode, Quality, OutputFormat};
+    use std::fs;
+
+    /// 辅助函数：创建一个 100x100 的红色 RGB 测试图片并保存到指定路径
+    fn create_test_image(path: &Path) {
+        // 使用 RGB 格式以兼容 JPEG（JPEG 不支持 alpha 通道）
+        let rgb = image::ImageBuffer::<image::Rgb<u8>, _>::from_fn(100, 100, |_, _| {
+            image::Rgb([255u8, 0, 0])
+        });
+        rgb.save(path).unwrap();
+    }
 
     #[test]
     fn test_image_format_detection() {
-        assert_eq!(ImageFormat::from_path(Path::new("test.jpg")), ImageFormat::Jpeg);
-        assert_eq!(ImageFormat::from_path(Path::new("test.PNG")), ImageFormat::Png);
-        assert_eq!(ImageFormat::from_path(Path::new("test.webp")), ImageFormat::WebP);
+        assert_eq!(
+            ImageFormat::from_path(Path::new("test.jpg")),
+            ImageFormat::Jpeg
+        );
+        assert_eq!(
+            ImageFormat::from_path(Path::new("test.PNG")),
+            ImageFormat::Png
+        );
+        assert_eq!(
+            ImageFormat::from_path(Path::new("test.webp")),
+            ImageFormat::WebP
+        );
     }
 
     #[test]
     fn test_default_config() {
         let config = OptimizerConfig::default();
         assert_eq!(config.quality.lossy, 85);
+    }
+
+    /// 测试 JPEG 压缩：创建 JPEG 测试图片，验证处理后的输出文件存在且大小合理
+    #[test]
+    fn test_jpeg_compression() {
+        let temp_dir = tempfile::tempdir().unwrap();
+        let input_path = temp_dir.path().join("test.jpg");
+        create_test_image(&input_path);
+
+        let config = OptimizerConfig {
+            overwrite: true,
+            ..Default::default()
+        };
+        let optimizer = Optimizer::new(config);
+        let result = optimizer.process_file(&input_path);
+
+        assert!(result.success, "JPEG 处理应该成功");
+        assert!(result.output_path.exists(), "输出文件应该存在");
+        assert!(result.new_size > 0, "输出文件大小应该大于 0");
+    }
+
+    /// 测试 PNG 压缩：创建 PNG 测试图片，用 oxipng 处理，验证输出文件存在
+    #[test]
+    fn test_png_compression() {
+        let temp_dir = tempfile::tempdir().unwrap();
+        let input_path = temp_dir.path().join("test.png");
+        create_test_image(&input_path);
+
+        let config = OptimizerConfig {
+            overwrite: true,
+            ..Default::default()
+        };
+        let optimizer = Optimizer::new(config);
+        let result = optimizer.process_file(&input_path);
+
+        assert!(result.success, "PNG 处理应该成功");
+        assert!(result.output_path.exists(), "输出文件应该存在");
+        assert!(result.new_size > 0, "输出文件大小应该大于 0");
+    }
+
+    /// 测试 WebP 转换：创建 RGBA 测试图片，处理为 WebP，验证输出文件存在且大小合理
+    #[test]
+    fn test_webp_conversion() {
+        let temp_dir = tempfile::tempdir().unwrap();
+        let input_path = temp_dir.path().join("test.webp");
+        create_test_image(&input_path);
+
+        let original_size = fs::metadata(&input_path).unwrap().len();
+
+        let config = OptimizerConfig {
+            overwrite: true,
+            ..Default::default()
+        };
+        let optimizer = Optimizer::new(config);
+        let result = optimizer.process_file(&input_path);
+
+        assert!(result.success, "WebP 处理应该成功");
+        assert!(result.output_path.exists(), "输出文件应该存在");
+        assert!(result.new_size > 0, "输出文件大小应该大于 0");
+        assert!(result.new_size <= original_size, "输出文件不应该比原始文件大");
+    }
+
+    /// 测试不支持的格式：创建 .xyz 文件，验证 process_file 返回 success=false
+    #[test]
+    fn test_process_unsupported_format() {
+        let temp_dir = tempfile::tempdir().unwrap();
+        let input_path = temp_dir.path().join("test.xyz");
+        fs::write(&input_path, b"not an image").unwrap();
+
+        let optimizer = Optimizer::with_default();
+        let result = optimizer.process_file(&input_path);
+
+        assert!(!result.success, "不支持的格式应该返回失败");
+        assert!(result.error.is_some(), "应该包含错误信息");
+        assert!(result.error.as_ref().unwrap().contains("不支持的格式"),
+            "错误信息应包含 '不支持的格式'，实际: {:?}", result.error);
+    }
+
+    /// 测试配置序列化：创建 OptimizerConfig，序列化为 JSON 字符串，反序列化验证字段一致
+    #[test]
+    fn test_config_serialization() {
+        let config = OptimizerConfig {
+            mode: CompressionMode::Lossless,
+            quality: Quality { lossy: 90, lossless: 95 },
+            max_width: Some(1920),
+            max_height: Some(1080),
+            format: OutputFormat::WebP,
+            preserve_metadata: false,
+            overwrite: true,
+            output_dir: Some(PathBuf::from("/tmp/output")),
+            workers: 8,
+        };
+
+        // 序列化为 JSON 字符串
+        let json = serde_json::to_string(&config).expect("序列化应该成功");
+
+        // 反序列化回配置
+        let deserialized: OptimizerConfig = serde_json::from_str(&json).expect("反序列化应该成功");
+
+        // 验证所有字段一致
+        assert_eq!(deserialized.mode, config.mode);
+        assert_eq!(deserialized.quality.lossy, config.quality.lossy);
+        assert_eq!(deserialized.quality.lossless, config.quality.lossless);
+        assert_eq!(deserialized.max_width, config.max_width);
+        assert_eq!(deserialized.max_height, config.max_height);
+        assert_eq!(deserialized.format, config.format);
+        assert_eq!(deserialized.preserve_metadata, config.preserve_metadata);
+        assert_eq!(deserialized.overwrite, config.overwrite);
+        assert_eq!(deserialized.output_dir, config.output_dir);
+        assert_eq!(deserialized.workers, config.workers);
     }
 }

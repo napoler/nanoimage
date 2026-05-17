@@ -136,3 +136,103 @@ fn test_batch_processor_new() {
     let files = BatchProcessor::collect_images(tempfile::tempdir().unwrap().path(), false);
     assert!(files.is_empty()); // empty dir, but processor works
 }
+
+/// 辅助函数：创建 100x100 的红色 RGB 测试图片并保存到指定路径
+fn create_test_image(path: &std::path::Path) {
+    // 使用 RGB 格式以兼容 JPEG（JPEG 不支持 alpha 通道）
+    let rgb = image::ImageBuffer::<image::Rgb<u8>, _>::from_fn(100, 100, |_, _| {
+        image::Rgb([255u8, 0, 0])
+    });
+    rgb.save(path).unwrap();
+}
+
+/// 测试批量处理同步带进度回调：创建 3 个测试图片，验证回调被调用 3 次且 progress.current 递增
+#[test]
+fn test_batch_process_sync_with_progress() {
+    use nanoimage_core::Optimizer;
+    use std::sync::{Arc, Mutex};
+    let temp_dir = tempfile::tempdir().unwrap();
+
+    // 创建 3 个测试图片文件
+    let files: Vec<std::path::PathBuf> = (0..3)
+        .map(|i| {
+            let path = temp_dir.path().join(format!("test{}.jpg", i));
+            create_test_image(&path);
+            path
+        })
+        .collect();
+
+    let optimizer = Optimizer::with_default();
+    let processor = BatchProcessor::new(optimizer);
+
+    // 使用 Arc<Mutex<>> 在 Fn 闭包中收集进度值
+    let progress_list = Arc::new(Mutex::new(Vec::new()));
+    let progress_clone = progress_list.clone();
+
+    let total_saved = processor.process_sync_with_progress(&files, move |progress| {
+        progress_clone.lock().unwrap().push(progress);
+    });
+
+    let collected = progress_list.lock().unwrap();
+    assert_eq!(collected.len(), 3, "回调应该被调用 3 次");
+    assert_eq!(collected[0].current, 1);
+    assert_eq!(collected[1].current, 2);
+    assert_eq!(collected[2].current, 3);
+    // total_saved 是 u64 类型，表示节省的字节数
+    let _ = total_saved;
+}
+
+/// 测试批量处理同步带结果：创建 2 个测试图片，验证返回的 results 包含 2 个元素
+#[test]
+fn test_batch_process_sync_with_results() {
+    use nanoimage_core::Optimizer;
+    let temp_dir = tempfile::tempdir().unwrap();
+
+    // 创建 2 个测试图片文件
+    let files: Vec<std::path::PathBuf> = (0..2)
+        .map(|i| {
+            let path = temp_dir.path().join(format!("test{}.jpg", i));
+            create_test_image(&path);
+            path
+        })
+        .collect();
+
+    let optimizer = Optimizer::with_default();
+    let processor = BatchProcessor::new(optimizer);
+
+    let (total_saved, results): (u64, Vec<nanoimage_core::ProcessResult>) =
+        processor.process_sync_with_results(&files, |_| {});
+
+    assert_eq!(results.len(), 2, "results 应该包含 2 个元素");
+    // total_saved 是 u64 类型，表示节省的字节数
+    let _ = total_saved;
+
+    // 验证每个结果都是成功的
+    for result in &results {
+        assert!(result.success, "每个文件处理都应该成功");
+    }
+}
+
+/// 测试 BatchProcessor::with_config 能正常创建实例
+#[test]
+fn test_batch_processor_with_config() {
+    let config = nanoimage_core::OptimizerConfig {
+        quality: nanoimage_core::Quality { lossy: 90, lossless: 95 },
+        overwrite: true,
+        workers: 4,
+        ..Default::default()
+    };
+    let processor = BatchProcessor::with_config(config);
+
+    // 验证处理器可以正常工作：收集空目录
+    let files = BatchProcessor::collect_images(tempfile::tempdir().unwrap().path(), false);
+    assert!(files.is_empty());
+
+    // 验证处理器可以处理文件
+    let temp_dir = tempfile::tempdir().unwrap();
+    let path = temp_dir.path().join("test.jpg");
+    create_test_image(&path);
+    let results = processor.process_sync(&[path.clone()]);
+    assert_eq!(results.len(), 1);
+    assert!(results[0].success, "with_config 创建的处理器应该能正常处理文件");
+}
