@@ -380,5 +380,5 @@ rustflags = ["-C", "target-feature=-crt-static"]
 
 ---
 
-*文档状态: 迭代 0 完成 (Bug 修复 + 警告清理) — 编译零警告，64 tests pass。修复: GUI文件状态、convert扩展名、serde/as_str不匹配、format_size去重、移除resvg、async错误处理。迭代 1-5 进行中*
-*完成度: 迭代 0/20 (5%)*
+*文档状态: 迭代 0 完成 (Bug 修复 + 警告清理) + 迭代 1 完成 (补充核心测试)。编译零警告，72 tests pass。迭代 1 新增: JPEG/PNG/WebP 压缩测试、格式不支持测试、配置序列化测试、批量处理进度回调测试。迭代 2-5 进行中*
+*完成度: 迭代 1/20 (5%)*
