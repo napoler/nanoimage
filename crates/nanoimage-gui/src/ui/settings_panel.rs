@@ -119,6 +119,22 @@ impl SettingsPanel {
             // 复选框选项
             ui.checkbox(&mut self.config.preserve_metadata, "保留元数据");
             ui.checkbox(&mut self.config.overwrite, "覆盖源文件");
+            ui.checkbox(&mut self.config.skip_failed, "跳过失败文件继续");
+
+            // 输出目录选择
+            ui.horizontal(|ui| {
+                ui.label("输出目录:");
+                let dir_text = self.config.output_dir
+                    .as_ref()
+                    .map(|p| p.to_string_lossy().to_string())
+                    .unwrap_or_else(|| "默认 (同目录)".to_string());
+                if ui.button("选择目录").clicked() {
+                    if let Some(path) = rfd::FileDialog::new().pick_folder() {
+                        self.config.output_dir = Some(path);
+                    }
+                }
+                ui.label(dir_text);
+            });
         });
     }
 

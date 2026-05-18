@@ -335,6 +335,7 @@ mod tests {
             preserve_metadata: false,
             overwrite: true,
             output_dir: Some(PathBuf::from("/tmp/output")),
+            skip_failed: true,
             workers: 8,
         };
 

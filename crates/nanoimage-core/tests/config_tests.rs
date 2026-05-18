@@ -125,6 +125,7 @@ fn test_config_save_and_load_roundtrip() {
         preserve_metadata: false,
         overwrite: true,
         output_dir: Some(PathBuf::from("/tmp/output")),
+        skip_failed: true,
         workers: 8,
     };
 

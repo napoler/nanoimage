@@ -16,11 +16,13 @@ pub struct FileEntry {
 
 impl FileEntry {
     pub fn new(path: PathBuf) -> Self {
-        let name = path.file_name()
+        let name = path
+            .file_name()
             .map(|n| n.to_string_lossy().to_string())
             .unwrap_or_else(|| "Unknown".to_string());
 
-        let size = path.metadata()
+        let size = path
+            .metadata()
             .map(|m| format_size(m.len()))
             .unwrap_or_else(|_| "Unknown".to_string());
 
@@ -36,12 +38,36 @@ impl FileEntry {
         }
     }
 
+    /// 计算节省百分比
     pub fn savings_percent(&self) -> f64 {
         match self.new_size {
             Some(new) if self.original_size > 0 => {
                 ((self.original_size as f64 - new as f64) / self.original_size as f64) * 100.0
             }
             _ => 0.0,
+        }
+    }
+
+    /// 根据状态和节省百分比获取颜色
+    fn savings_color(&self) -> egui::Color32 {
+        match self.status {
+            FileStatus::Completed => {
+                let pct = self.savings_percent();
+                if pct >= 70.0 {
+                    egui::Color32::from_rgb(34, 197, 94) // 深绿
+                } else if pct >= 40.0 {
+                    egui::Color32::from_rgb(74, 222, 128) // 绿色
+                } else if pct >= 10.0 {
+                    egui::Color32::from_rgb(134, 239, 172) // 浅绿
+                } else if pct >= 0.0 {
+                    egui::Color32::from_rgb(253, 224, 71) // 黄色
+                } else {
+                    egui::Color32::from_rgb(239, 68, 68) // 红色（压缩后更大）
+                }
+            }
+            FileStatus::Error(_) => egui::Color32::from_rgb(239, 68, 68), // 红色
+            FileStatus::Processing => egui::Color32::from_rgb(251, 191, 36), // 橙色
+            FileStatus::Pending | FileStatus::Skipped => egui::Color32::from_rgb(156, 163, 175), // 灰色
         }
     }
 }
@@ -74,7 +100,6 @@ impl FilePanel {
 
     /// 显示拖拽区域
     pub fn show(&mut self, ui: &mut egui::Ui) {
-        // 简单提示区域
         ui.horizontal(|ui| {
             if self.files.is_empty() {
                 ui.label("📁 拖拽文件到此处");
@@ -82,20 +107,31 @@ impl FilePanel {
                 ui.label(format!("📁 {} 个文件", self.files.len()));
             }
 
-            if !self.files.is_empty()
-                && ui.button("清空").clicked() {
-                    self.clear();
-                }
+            if !self.files.is_empty() && ui.button("清空").clicked() {
+                self.clear();
+            }
         });
     }
 
-    /// 显示文件列表
+    /// 显示文件列表（改进版：带压缩率颜色区分）
     pub fn show_file_list(&mut self, ui: &mut egui::Ui) {
         egui::ScrollArea::vertical()
-            .max_height(200.0)
+            .max_height(300.0)
             .show(ui, |ui| {
+                if self.files.is_empty() {
+                    ui.allocate_ui_with_layout(
+                        ui.available_size(),
+                        egui::Layout::centered_and_justified(egui::Direction::TopDown),
+                        |ui| {
+                            ui.label(egui::RichText::new("暂无文件").size(14.0));
+                        },
+                    );
+                    return;
+                }
+
                 for file in &self.files {
                     ui.horizontal(|ui| {
+                        // 图标
                         let icon = match file.status {
                             FileStatus::Pending => "⏳",
                             FileStatus::Processing => "🔄",
@@ -104,12 +140,87 @@ impl FilePanel {
                             FileStatus::Error(_) => "❌",
                         };
                         ui.label(icon);
+
+                        // 文件名
                         ui.label(&file.name);
+
+                        // 原始大小
                         ui.label(&file.size);
-                        if let Some(new_size) = file.new_size {
-                            ui.label(format!("→ {} (-{:.*}%)", format_size(new_size), 1, file.savings_percent()));
+
+                        // 压缩结果
+                        match file.status {
+                            FileStatus::Completed => {
+                                if let Some(new_size) = file.new_size {
+                                    let pct = file.savings_percent();
+                                    let color = file.savings_color();
+                                    let sign = if pct >= 0.0 { "-" } else { "+" };
+                                    ui.label(
+                                        egui::RichText::new(format!(
+                                            "→ {} ({sign}{:.0}%)",
+                                            format_size(new_size),
+                                            pct.abs()
+                                        ))
+                                        .color(color)
+                                        .monospace(),
+                                    );
+                                }
+                            }
+                            FileStatus::Error(ref err) => {
+                                ui.label(
+                                    egui::RichText::new(format!("Error: {}", err))
+                                        .color(egui::Color32::from_rgb(239, 68, 68))
+                                        .monospace(),
+                                );
+                            }
+                            FileStatus::Processing => {
+                                ui.label(
+                                    egui::RichText::new("...")
+                                        .color(egui::Color32::from_rgb(251, 191, 36)),
+                                );
+                            }
+                            FileStatus::Pending => {
+                                ui.label(
+                                    egui::RichText::new("等待处理")
+                                        .color(egui::Color32::from_rgb(156, 163, 175)),
+                                );
+                            }
+                            FileStatus::Skipped => {
+                                ui.label(
+                                    egui::RichText::new("已跳过")
+                                        .color(egui::Color32::from_rgb(156, 163, 175)),
+                                );
+                            }
                         }
                     });
+                }
+
+                // 总计摘要行
+                ui.separator();
+
+                let completed = self.files.iter().filter(|f| f.status == FileStatus::Completed).count();
+                let failed = self.files.iter().filter(|f| matches!(f.status, FileStatus::Error(_))).count();
+                let total_original: u64 = self.files.iter().map(|f| f.original_size).sum();
+                let total_new: u64 = self.files.iter()
+                    .filter_map(|f| f.new_size)
+                    .sum();
+                let total_saved = total_original.saturating_sub(total_new);
+
+                if completed > 0 {
+                    ui.horizontal(|ui| {
+                        ui.strong("总计:");
+                        ui.label(format!("原始 {} → 压缩后 {}", format_size(total_original), format_size(total_new)));
+                        let pct = if total_original > 0 {
+                            format!("{:.1}%", (total_saved as f64 / total_original as f64) * 100.0)
+                        } else {
+                            "0.0%".to_string()
+                        };
+                        ui.label(egui::RichText::new(format!("节省 {}", format_size(total_saved))).color(egui::Color32::from_rgb(34, 197, 94)));
+                        ui.label(egui::RichText::new(pct).color(egui::Color32::from_rgb(34, 197, 94)));
+                    });
+                }
+
+                if failed > 0 {
+                    ui.label(egui::RichText::new(format!("⚠ {} 个文件处理失败", failed)).color(egui::Color32::from_rgb(239, 68, 68)));
                 }
             });
     }

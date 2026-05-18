@@ -28,6 +28,10 @@ pub struct NanoImageApp {
     current_file: String,
     // worker 线程的 channel
     worker_rx: Option<Receiver<WorkerMsg>>,
+    /// 处理完成是否已通知
+    show_completion_dialog: bool,
+    /// 完成时节省的总字节数
+    total_saved_bytes: u64,
 }
 
 impl NanoImageApp {
@@ -43,6 +47,8 @@ impl NanoImageApp {
             progress: 0.0,
             current_file: String::new(),
             worker_rx: None,
+            show_completion_dialog: false,
+            total_saved_bytes: 0,
         }
     }
 
@@ -123,15 +129,23 @@ impl NanoImageApp {
                                     Some(result.new_size),
                                 );
                             } else {
-                                self.file_panel.update_status(
-                                    &result.original_path,
+                                // 如果 skip_failed 为 true，标记为 Skipped 而非 Error
+                                let status = if self.config.skip_failed {
+                                    FileStatus::Skipped
+                                } else {
                                     FileStatus::Error(
                                         result.error.unwrap_or_else(|| "Unknown error".to_string()),
-                                    ),
+                                    )
+                                };
+                                self.file_panel.update_status(
+                                    &result.original_path,
+                                    status,
                                     None,
                                 );
                             }
                         }
+                        self.show_completion_dialog = true;
+                        self.total_saved_bytes = total_saved;
                         self.processing = false;
                         self.progress = 100.0;
                         self.progress_panel.reset();
@@ -163,6 +177,31 @@ impl eframe::App for NanoImageApp {
                 .filter_map(|f| f.path)
                 .collect();
             self.add_files(paths);
+        }
+
+        // 处理完成弹窗
+        if self.show_completion_dialog {
+            let total_saved = self.total_saved_bytes;
+            let success_count = self.file_panel.files.iter()
+                .filter(|f| f.status == FileStatus::Completed)
+                .count();
+            let total = self.file_panel.files.len();
+
+            egui::Window::new("处理完成")
+                .collapsible(false)
+                .resizable(false)
+                .show(ctx, |ui| {
+                    ui.label(egui::RichText::new("✅ 处理完成!").heading());
+                    ui.separator();
+                    ui.label(format!("共 {} 个文件，成功 {} 个", total, success_count));
+                    ui.label(format!("节省: {}", format_size(total_saved)));
+                    ui.separator();
+                    if ui.button("确定").clicked() {
+                        self.show_completion_dialog = false;
+                    }
+                });
+
+            self.show_completion_dialog = false;
         }
 
         egui::CentralPanel::default().show(ctx, |ui| {

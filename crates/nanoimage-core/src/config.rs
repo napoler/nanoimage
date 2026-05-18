@@ -71,6 +71,9 @@ pub struct OptimizerConfig {
     /// 输出目录 (None = 同目录 optimized 子文件夹)
     #[serde(default)]
     pub output_dir: Option<std::path::PathBuf>,
+    /// 跳过失败文件继续处理
+    #[serde(default)]
+    pub skip_failed: bool,
     /// 工作线程数
     #[serde(default = "default_workers")]
     pub workers: usize,
@@ -98,6 +101,7 @@ impl Default for OptimizerConfig {
             preserve_metadata: true,
             overwrite: false,
             output_dir: None,
+            skip_failed: false,
             workers: default_workers(),
         }
     }
