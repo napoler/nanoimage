@@ -2577,6 +2577,7 @@ dependencies = [
  "nanoimage-core",
  "rfd",
  "serde",
+ "serde_json",
  "tokio",
  "tracing",
  "tracing-subscriber",

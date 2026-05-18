@@ -135,6 +135,48 @@ impl SettingsPanel {
                 }
                 ui.label(dir_text);
             });
+
+            // 配置导入/导出
+            ui.separator();
+            ui.horizontal(|ui| {
+                if ui.button("导入配置").clicked() {
+                    if let Some(path) = rfd::FileDialog::new()
+                        .add_filter("配置文件", &["json"])
+                        .pick_file()
+                    {
+                        if let Ok(config) = OptimizerConfig::load_from_file(&path) {
+                            self.config = config;
+                            // 更新索引以匹配加载的配置
+                            self.format_index = match self.config.format {
+                                OutputFormat::KeepOriginal => 0,
+                                OutputFormat::Jpeg => 1,
+                                OutputFormat::Png => 2,
+                                OutputFormat::WebP => 3,
+                                OutputFormat::Gif => 4,
+                            };
+                            self.mode_index = match self.config.mode {
+                                CompressionMode::Lossy => 0,
+                                CompressionMode::Lossless => 1,
+                                CompressionMode::Smart => 2,
+                            };
+                            println!("导入配置成功: {}", path.display());
+                        } else {
+                            eprintln!("导入配置失败: {}", path.display());
+                        }
+                    }
+                }
+
+                if ui.button("导出配置").clicked() {
+                    if let Some(path) = rfd::FileDialog::new()
+                        .add_filter("JSON 文件", &["json"])
+                        .set_file_name("nanoimage-config.json")
+                        .save_file()
+                    {
+                        let _ = self.config.save_to_file(&path);
+                        println!("导出配置成功: {}", path.display());
+                    }
+                }
+            });
         });
     }
 

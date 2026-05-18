@@ -27,7 +27,7 @@ impl OutputFormat {
 }
 
 /// 压缩质量配置
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
 pub struct Quality {
     /// 有损压缩质量 1-100
     pub lossy: u8,
@@ -45,7 +45,7 @@ impl Default for Quality {
 }
 
 /// 优化器配置
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct OptimizerConfig {
     /// 压缩模式
     #[serde(default)]

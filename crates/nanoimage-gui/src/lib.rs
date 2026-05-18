@@ -1,5 +1,6 @@
 //! NanoImage GUI 应用
 mod ui;
+mod config_persistence;
 
 use eframe::egui;
 use nanoimage_core::{format_size, BatchProcessor, FileStatus, OptimizerConfig, ProcessResult, Progress};
@@ -32,11 +33,13 @@ pub struct NanoImageApp {
     show_completion_dialog: bool,
     /// 完成时节省的总字节数
     total_saved_bytes: u64,
+    /// 配置是否已修改（用于防抖自动保存）
+    config_dirty: bool,
 }
 
 impl NanoImageApp {
     pub fn new() -> Self {
-        let config = OptimizerConfig::default();
+        let config = config_persistence::load_config();
         Self {
             settings_panel: SettingsPanel::with_config(config.clone()),
             file_panel: FilePanel::new(),
@@ -49,6 +52,7 @@ impl NanoImageApp {
             worker_rx: None,
             show_completion_dialog: false,
             total_saved_bytes: 0,
+            config_dirty: false,
         }
     }
 
@@ -67,6 +71,11 @@ impl NanoImageApp {
             let count = self.file_panel.len();
             self.log_panel.info(format!("添加了 {} 个文件", count));
         }
+    }
+
+    /// 保存配置到文件
+    fn save_config(&self) {
+        config_persistence::save_config(&self.config);
     }
 
     /// 处理文件 (使用 channel 与后台线程通信)
@@ -218,7 +227,15 @@ impl eframe::App for NanoImageApp {
 
             // 设置面板
             self.settings_panel.show(ui);
-            self.config = self.settings_panel.config().clone();
+            let new_config = self.settings_panel.config().clone();
+            if new_config != self.config {
+                self.config = new_config;
+                self.config_dirty = true;
+            }
+            if self.config_dirty {
+                self.save_config();
+                self.config_dirty = false;
+            }
 
             ui.separator();
 
