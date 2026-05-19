@@ -8,12 +8,13 @@ use std::path::PathBuf;
 use std::sync::mpsc::{self, Receiver};
 use std::thread;
 
-use ui::{file_panel::FilePanel, settings_panel::SettingsPanel, progress::ProgressPanel, log_view::LogPanel};
+use ui::{file_panel::FilePanel, log_view::LogPanel, progress::ProgressPanel, settings_panel::SettingsPanel};
 
 /// 消息类型：后台线程向UI线程发送的消息
 enum WorkerMsg {
     Progress(Progress),
     Completed(Vec<ProcessResult>),
+    Error(String),
 }
 
 /// 主应用
@@ -111,7 +112,10 @@ impl NanoImageApp {
 
     /// 轮询处理 worker 消息
     fn poll_worker(&mut self) {
-        if let Some(ref rx) = self.worker_rx {
+        // 使用 Option::take 来获取 channel，避免借用冲突
+        if let Some(rx) = self.worker_rx.take() {
+            let mut should_clear = false;
+            
             while let Ok(msg) = rx.try_recv() {
                 match msg {
                     WorkerMsg::Progress(progress) => {
@@ -129,15 +133,20 @@ impl NanoImageApp {
                     }
                     WorkerMsg::Completed(results) => {
                         let mut total_saved: u64 = 0;
+                        let mut success_count = 0;
+                        let mut failed_count = 0;
+                        
                         for result in results {
                             if result.success {
                                 total_saved += result.savings.max(0) as u64;
+                                success_count += 1;
                                 self.file_panel.update_status(
                                     &result.original_path,
                                     FileStatus::Completed,
                                     Some(result.new_size),
                                 );
                             } else {
+                                failed_count += 1;
                                 // 如果 skip_failed 为 true，标记为 Skipped 而非 Error
                                 let status = if self.config.skip_failed {
                                     FileStatus::Skipped
@@ -153,23 +162,41 @@ impl NanoImageApp {
                                 );
                             }
                         }
+                        
+                        // 处理完成通知
+                        if success_count > 0 {
+                            self.log_panel.success(format!(
+                                "处理完成！成功压缩 {} 个文件，共节省 {}",
+                                success_count,
+                                format_size(total_saved)
+                            ));
+                        }
+                        if failed_count > 0 {
+                            self.log_panel.error(format!("处理完成，但有 {} 个文件失败", failed_count));
+                        }
+                        
                         self.show_completion_dialog = true;
                         self.total_saved_bytes = total_saved;
                         self.processing = false;
                         self.progress = 100.0;
                         self.progress_panel.reset();
-                        self.log_panel
-                            .success(format!("处理完成! 共节省 {}", format_size(total_saved)));
-                        self.worker_rx = None;
+                        should_clear = true;
                         break;
+                    }
+                    WorkerMsg::Error(msg) => {
+                        self.log_panel.error(msg);
+                        self.processing = false;
+                        should_clear = true;
                     }
                 }
             }
-        }
-
-        // 如果处理完成且没有更多消息，清空 worker
-        if !self.processing && self.worker_rx.is_some() {
-            self.worker_rx = None;
+            
+            if should_clear {
+                self.worker_rx = None;
+            } else {
+                // 如果还有消息未处理完，重新放回
+                self.worker_rx = Some(rx);
+            }
         }
     }
 }
