@@ -58,12 +58,14 @@ pub fn save_config(config: &OptimizerConfig) {
 }
 
 /// 从指定路径加载配置
+#[allow(dead_code)]
 pub fn load_config_from_path(path: &Path) -> Result<OptimizerConfig, String> {
     OptimizerConfig::load_from_file(path)
         .map_err(|e| format!("加载配置失败: {}", e))
 }
 
 /// 保存配置到指定路径
+#[allow(dead_code)]
 pub fn save_config_to_path(config: &OptimizerConfig, path: &Path) -> Result<(), String> {
     config.save_to_file(path)
         .map_err(|e| format!("保存配置失败: {}", e))

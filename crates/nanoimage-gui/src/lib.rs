@@ -11,6 +11,7 @@ use std::thread;
 use ui::{file_panel::FilePanel, log_view::LogPanel, progress::ProgressPanel, settings_panel::SettingsPanel};
 
 /// 消息类型：后台线程向UI线程发送的消息
+#[allow(dead_code)]
 enum WorkerMsg {
     Progress(Progress),
     Completed(Vec<ProcessResult>),
