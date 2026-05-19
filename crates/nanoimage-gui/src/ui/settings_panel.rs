@@ -1,6 +1,7 @@
 //! 设置面板 - 配置 UI 组件
 use eframe::egui;
 use nanoimage_core::{OptimizerConfig, OutputFormat, CompressionMode};
+use std::path::Path;
 
 /// 设置面板组件
 pub struct SettingsPanel {
@@ -160,6 +161,8 @@ impl SettingsPanel {
                                 CompressionMode::Smart => 2,
                             };
                             println!("导入配置成功: {}", path.display());
+                            // 保存导入的配置
+                            let _ = self.save_config_to_path(&path);
                         } else {
                             eprintln!("导入配置失败: {}", path.display());
                         }
@@ -178,6 +181,12 @@ impl SettingsPanel {
                 }
             });
         });
+    }
+
+    /// 保存配置到指定路径
+    fn save_config_to_path(&self, path: &Path) -> Result<(), String> {
+        self.config.save_to_file(path)
+            .map_err(|e| format!("保存配置失败: {}", e))
     }
 
     pub fn config(&self) -> &OptimizerConfig {

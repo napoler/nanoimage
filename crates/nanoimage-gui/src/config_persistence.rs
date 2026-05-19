@@ -1,17 +1,17 @@
 //! 配置持久化模块
 //!
-//! 负责将 OptimizerConfig 保存到 ~/.config/nanoimage/config.json
+//! 负责将 OptimizerConfig 保存到 ~/.hermes/nanoimage/config.json
 
 use nanoimage_core::OptimizerConfig;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
-/// 返回配置目录路径: ~/.config/nanoimage/
+/// 返回配置目录路径: ~/.hermes/nanoimage/
 fn config_dir() -> PathBuf {
     let home = std::env::var("HOME").unwrap_or_else(|_| String::new());
-    PathBuf::from(home).join(".config").join("nanoimage")
+    PathBuf::from(home).join(".hermes").join("nanoimage")
 }
 
-/// 返回配置文件路径: ~/.config/nanoimage/config.json
+/// 返回配置文件路径: ~/.hermes/nanoimage/config.json
 fn config_path() -> PathBuf {
     config_dir().join("config.json")
 }
@@ -21,15 +21,20 @@ fn config_path() -> PathBuf {
 /// 如果文件不存在或加载失败，返回默认配置
 pub fn load_config() -> OptimizerConfig {
     let path = config_path();
-    match OptimizerConfig::load_from_file(&path) {
-        Ok(config) => {
-            println!("加载配置: {}", path.display());
-            config
+    if path.exists() {
+        match OptimizerConfig::load_from_file(&path) {
+            Ok(config) => {
+                println!("加载配置: {}", path.display());
+                config
+            }
+            Err(e) => {
+                eprintln!("加载配置失败 (使用默认配置): {}", e);
+                OptimizerConfig::default()
+            }
         }
-        Err(e) => {
-            eprintln!("加载配置失败 (使用默认配置): {}", e);
-            OptimizerConfig::default()
-        }
+    } else {
+        // 配置文件不存在，返回默认配置
+        OptimizerConfig::default()
     }
 }
 
@@ -50,4 +55,16 @@ pub fn save_config(config: &OptimizerConfig) {
     if let Err(e) = config.save_to_file(&path) {
         eprintln!("保存配置失败: {}", e);
     }
+}
+
+/// 从指定路径加载配置
+pub fn load_config_from_path(path: &Path) -> Result<OptimizerConfig, String> {
+    OptimizerConfig::load_from_file(path)
+        .map_err(|e| format!("加载配置失败: {}", e))
+}
+
+/// 保存配置到指定路径
+pub fn save_config_to_path(config: &OptimizerConfig, path: &Path) -> Result<(), String> {
+    config.save_to_file(path)
+        .map_err(|e| format!("保存配置失败: {}", e))
 }
