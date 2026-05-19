@@ -5,6 +5,13 @@ use tokio::sync::mpsc;
 use crate::optimizer::Optimizer;
 use crate::config::OptimizerConfig;
 
+/// 检查文件是否已被优化（通过文件名判断）
+fn is_already_optimized(path: &Path) -> bool {
+    path.file_stem()
+        .map(|s| s.to_string_lossy().contains("_optimized"))
+        .unwrap_or(false)
+}
+
 /// 进度信息
 #[derive(Debug, Clone)]
 pub struct Progress {
@@ -47,6 +54,38 @@ impl BatchProcessor {
             .iter()
             .map(|path| self.optimizer.process_file(path))
             .collect()
+    }
+
+    /// 串行处理 (同步) 带跳过失败文件和仅处理未优化文件的选项
+    pub fn process_sync_with_options(
+        &self,
+        files: &[PathBuf],
+        skip_failed: bool,
+        only_unoptimized: bool,
+    ) -> (Vec<crate::optimizer::ProcessResult>, usize) {
+        let mut results = Vec::with_capacity(files.len());
+        let mut failed_count = 0;
+
+        for file in files {
+            // 检查是否已优化
+            if only_unoptimized && is_already_optimized(file) {
+                eprintln!("跳过已优化文件: {}", file.display());
+                continue;
+            }
+
+            let result = self.optimizer.process_file(file);
+            
+            if result.success {
+                results.push(result);
+            } else if skip_failed {
+                eprintln!("跳过失败文件 {}: {}", file.display(), result.error.as_ref().unwrap_or(&String::from("未知错误")));
+                failed_count += 1;
+            } else {
+                results.push(result);
+            }
+        }
+
+        (results, failed_count)
     }
 
     /// 串行处理 (同步) 带进度回调

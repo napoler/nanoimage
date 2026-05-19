@@ -73,9 +73,9 @@ pub struct Args {
     #[arg(short = 's', long = "skip-failed")]
     skip_failed: bool,
 
-    /// 跳过已优化的文件（输出文件存在且大小不大于输入文件时跳过）
-    #[arg(long = "skip-optimized")]
-    skip_optimized: bool,
+    /// 仅处理未优化的文件（跳过文件名包含 _optimized 的文件）
+    #[arg(long = "only-unoptimized")]
+    only_unoptimized: bool,
 }
 
 /// 获取目标格式字符串（用于 dry-run 预览）
@@ -175,7 +175,11 @@ pub fn execute(args: Args) -> Result<()> {
     }
 
     success(&format!("⚡ 开始处理 ({} 线程)...", args.workers));
-    let results = processor.process_sync(&files);
+    let (results, _failed_count) = processor.process_sync_with_options(
+        &files,
+        args.skip_failed,
+        args.only_unoptimized,
+    );
 
     let mut success_count = 0;
     let mut total_original: u64 = 0;
