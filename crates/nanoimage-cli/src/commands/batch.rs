@@ -80,7 +80,11 @@ pub struct Args {
 
 /// 获取目标格式字符串（用于 dry-run 预览）
 fn target_format_str(args: &Args, config: &nanoimage_core::OptimizerConfig) -> String {
-    let fmt = args.format.as_ref().map(|f| f.clone().into()).unwrap_or(config.format);
+    let fmt = args
+        .format
+        .as_ref()
+        .map(|f| f.clone().into())
+        .unwrap_or(config.format);
     match fmt {
         OutputFormat::KeepOriginal => "keep".to_string(),
         OutputFormat::Jpeg => "jpg".to_string(),
@@ -88,6 +92,30 @@ fn target_format_str(args: &Args, config: &nanoimage_core::OptimizerConfig) -> S
         OutputFormat::WebP => "webp".to_string(),
         OutputFormat::Gif => "gif".to_string(),
     }
+}
+
+/// 截断字符串以适应表格列宽
+fn truncate_str(s: &str, max_width: usize) -> String {
+    let mut result = String::new();
+    let mut width = 0;
+    
+    for c in s.chars() {
+        let char_width = if c as u32 > 0x2FF && c as u32 != 0x3030 { 2 } else { 1 };
+        if width + char_width > max_width - 3 {
+            result.push_str("...");
+            break;
+        }
+        result.push(c);
+        width += char_width;
+    }
+    
+    // 补齐空格
+    while width < max_width - 3 {
+        result.push(' ');
+        width += 1;
+    }
+    
+    result
 }
 
 pub fn execute(args: Args) -> Result<()> {
@@ -177,9 +205,17 @@ pub fn execute(args: Args) -> Result<()> {
 
     // 打印结果表格
     if success_count > 0 {
-        println!("📊 处理结果");
+        println!("\n📊 压缩结果");
+        println!("┌{}┐", "─".repeat(78));
+        println!(
+            "│ {:<40} {:>12} {:>12} {:>9} │",
+            "文件名", "原始大小", "压缩后", "压缩率"
+        );
+        println!("├{}┤", "─".repeat(78));
 
-        let mut rows: Vec<Vec<String>> = Vec::with_capacity(success_count);
+        let mut total_original_table: u64 = 0;
+        let mut total_new_table: u64 = 0;
+
         for result in &results {
             if !result.success {
                 continue;
@@ -191,32 +227,43 @@ pub fn execute(args: Args) -> Result<()> {
                 .unwrap_or_default();
             let orig = format_size(result.original_size);
             let new = format_size(result.new_size);
-            let savings = if result.original_size > 0 {
-                format!("{:.1}%", (result.savings as f64 / result.original_size as f64) * 100.0)
+            let rate = if result.original_size > 0 {
+                format!(
+                    "{:>8.1}%",
+                    (1.0 - result.new_size as f64 / result.original_size as f64) * 100.0
+                )
             } else {
                 "0.0%".to_string()
             };
-            rows.push(vec![name, orig, new, savings]);
+            println!(
+                "│ {:<40} {:>12} {:>12} {:>9} │",
+                truncate_str(&name, 40),
+                orig,
+                new,
+                rate
+            );
+            total_original_table += result.original_size;
+            total_new_table += result.new_size;
         }
 
         // 添加总计行
-        let total_saved = total_original.saturating_sub(total_new);
-        let total_savings_pct = if total_original > 0 {
-            format!("{:.1}%", (total_saved as f64 / total_original as f64) * 100.0)
+        let total_saved = total_original_table.saturating_sub(total_new_table);
+        let total_rate = if total_original_table > 0 {
+            format!(
+                "{:>8.1}%",
+                (total_saved as f64 / total_original_table as f64) * 100.0
+            )
         } else {
             "0.0%".to_string()
         };
-        rows.push(vec![
-            "总计".to_string(),
-            format_size(total_original),
-            format_size(total_new),
-            total_savings_pct,
-        ]);
-
-        print_table(
-            &["文件名", "原始大小", "压缩后", "节省"],
-            rows,
+        println!(
+            "│ {:<40} {:>12} {:>12} {:>9} │",
+            "总计",
+            format_size(total_original_table),
+            format_size(total_new_table),
+            total_rate
         );
+        println!("└{}┘", "─".repeat(78));
     }
 
     // 打印失败文件列表
