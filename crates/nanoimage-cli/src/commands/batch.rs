@@ -68,6 +68,14 @@ pub struct Args {
     /// 预览模式：仅显示处理计划，不实际处理
     #[arg(long)]
     dry_run: bool,
+
+    /// 跳过处理失败的文件，继续处理其他文件
+    #[arg(short = 's', long = "skip-failed")]
+    skip_failed: bool,
+
+    /// 跳过已优化的文件（输出文件存在且大小不大于输入文件时跳过）
+    #[arg(long = "skip-optimized")]
+    skip_optimized: bool,
 }
 
 /// 获取目标格式字符串（用于 dry-run 预览）
