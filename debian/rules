@@ -1,0 +1,27 @@
+#!/usr/bin/make -f
+
+build:
+	cargo build --release
+
+install: build
+	install -D -m 0755 target/release/nanoimage debian/nanoimage/usr/bin/nanoimage
+	install -D -m 0755 target/release/nanoimage-gui debian/nanoimage-gui/usr/bin/nanoimage-gui
+	install -D -m 0644 debian/nanoimage-gui.desktop debian/nanoimage-gui/usr/share/applications/nanoimage-gui.desktop
+
+clean:
+	cargo clean
+	rm -rf debian/nanoimage debian/nanoimage-gui
+
+binary: install
+	mkdir -p debian/nanoimage/DEBIAN
+	mkdir -p debian/nanoimage-gui/DEBIAN
+
+	dpkg-deb --build debian/nanoimage ../nanoimage_0.1.0_amd64.deb
+	dpkg-deb --build debian/nanoimage-gui ../nanoimage-gui_0.1.0_amd64.deb
+
+binary-indep:
+	echo "No indep packages"
+
+binary-arch: binary
+
+.PHONY: build install clean binary binary-indep binary-arch

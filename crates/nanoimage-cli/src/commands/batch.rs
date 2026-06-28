@@ -10,8 +10,10 @@ use std::path::PathBuf;
 pub enum OutputFormatArg {
     Jpg,
     Png,
+    #[value(alias = "webp")]
     WebP,
     Gif,
+    #[value(alias = "keeporiginal")]
     KeepOriginal,
 }
 

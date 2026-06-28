@@ -130,7 +130,7 @@ pub fn print_table(headers: &[&str], rows: Vec<Vec<String>>) {
     let mut sep = String::from("├");
     for &w in &col_widths {
         sep.push_str(&"─".repeat(w + padding * 2 - 1));
-        sep.push_str("┼");
+        sep.push('┼');
     }
 
     // 打印表头

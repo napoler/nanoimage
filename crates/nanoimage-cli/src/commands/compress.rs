@@ -5,6 +5,7 @@ use anyhow::Result;
 use std::path::PathBuf;
 use nanoimage_core::{format_size, Optimizer};
 
+/// compress 子命令的参数
 #[derive(clap::Parser)]
 pub struct Args {
     /// 输入文件
@@ -24,7 +25,14 @@ pub struct Args {
     overwrite: bool,
 }
 
+/// 执行压缩命令
+///
+/// 验证输入文件存在性，加载配置，调用 Optimizer 处理单个文件
 pub fn execute(args: Args) -> Result<()> {
+    if !args.input.exists() {
+        anyhow::bail!("输入文件不存在: {}", args.input.display());
+    }
+
     let mut config = load_config();
     config.quality.lossy = args.quality;
     config.overwrite = args.overwrite;

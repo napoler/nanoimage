@@ -48,7 +48,6 @@ impl LogPanel {
         self.log(msg, LogLevel::Success);
     }
 
-    #[allow(dead_code)]
     /// 添加错误日志
     pub fn error(&mut self, msg: String) {
         self.log(msg, LogLevel::Error);
@@ -79,10 +78,10 @@ impl LogPanel {
                 }
             });
 
-        if !self.entries.is_empty() {
-            if ui.button("清空日志").clicked() {
-                self.clear();
-            }
+        if !self.entries.is_empty()
+            && ui.button("清空日志").clicked()
+        {
+            self.clear();
         }
     }
 }

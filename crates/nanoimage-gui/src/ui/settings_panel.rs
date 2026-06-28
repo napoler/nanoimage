@@ -11,6 +11,7 @@ pub struct SettingsPanel {
 }
 
 impl SettingsPanel {
+    /// 创建默认设置面板
     pub fn new() -> Self {
         Self {
             config: OptimizerConfig::default(),
@@ -19,6 +20,7 @@ impl SettingsPanel {
         }
     }
 
+    /// 使用给定配置创建设置面板
     pub fn with_config(config: OptimizerConfig) -> Self {
         let format_index = match config.format {
             OutputFormat::KeepOriginal => 0,
@@ -160,11 +162,11 @@ impl SettingsPanel {
                                 CompressionMode::Lossless => 1,
                                 CompressionMode::Smart => 2,
                             };
-                            println!("导入配置成功: {}", path.display());
+                            tracing::info!("导入配置成功: {}", path.display());
                             // 保存导入的配置
                             let _ = self.save_config_to_path(&path);
                         } else {
-                            eprintln!("导入配置失败: {}", path.display());
+                            tracing::error!("导入配置失败: {}", path.display());
                         }
                     }
                 }
@@ -176,7 +178,7 @@ impl SettingsPanel {
                         .save_file()
                     {
                         let _ = self.config.save_to_file(&path);
-                        println!("导出配置成功: {}", path.display());
+                        tracing::info!("导出配置成功: {}", path.display());
                     }
                 }
             });

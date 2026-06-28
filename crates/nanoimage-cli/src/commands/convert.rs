@@ -28,6 +28,7 @@ pub struct Args {
 pub enum ConvertFormat {
     Jpg,
     Png,
+    #[value(alias = "webp")]
     WebP,
     Gif,
 }
@@ -56,9 +57,11 @@ pub fn execute(args: Args) -> Result<()> {
     let result = optimizer.process_file(&args.input);
 
     if result.success {
-        // 如果输出路径不匹配，重命名文件以匹配用户指定的输出路径
+        // 如果输出路径不匹配，复制文件以匹配用户指定的输出路径
+        // 使用 copy + remove 而不是 rename，避免跨文件系统问题
         if result.output_path != args.output {
-            std::fs::rename(&result.output_path, &args.output)?;
+            std::fs::copy(&result.output_path, &args.output)?;
+            std::fs::remove_file(&result.output_path).ok();
         }
         success(&format!("✓ 转换完成: {} → {}", args.input.display(), args.output.display()));
     } else {

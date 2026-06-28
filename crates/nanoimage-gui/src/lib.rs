@@ -11,14 +11,16 @@ use std::thread;
 use ui::{file_panel::FilePanel, log_view::LogPanel, progress::ProgressPanel, settings_panel::SettingsPanel};
 
 /// 消息类型：后台线程向UI线程发送的消息
-#[allow(dead_code)]
 enum WorkerMsg {
     Progress(Progress),
     Completed(Vec<ProcessResult>),
+    #[allow(dead_code)]
     Error(String),
 }
 
 /// 主应用
+///
+/// GUI 应用程序的核心状态，包含配置、文件面板、进度面板和日志面板
 pub struct NanoImageApp {
     config: OptimizerConfig,
     file_panel: FilePanel,
@@ -39,7 +41,16 @@ pub struct NanoImageApp {
     config_dirty: bool,
 }
 
+impl Default for NanoImageApp {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl NanoImageApp {
+    /// 创建新的 NanoImageApp 实例
+    ///
+    /// 从配置文件加载配置，若文件不存在则使用默认配置
     pub fn new() -> Self {
         let config = config_persistence::load_config();
         Self {
@@ -103,7 +114,7 @@ impl NanoImageApp {
         // 启动后台线程
         let _handle = thread::spawn(move || {
             let processor = BatchProcessor::with_config(config);
-            let (_total_saved, results) = processor.process_sync_with_results(&files, &|progress| {
+            let (_total_saved, results) = processor.process_sync_with_results(&files, |progress| {
                 tx.send(WorkerMsg::Progress(progress)).ok();
             });
 

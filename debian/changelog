@@ -1,0 +1,10 @@
+nanoimage (0.1.0) unstable; urgency=medium
+
+  * Initial release
+  * CLI: compress, batch, convert, settings commands
+  * GUI: egui-based desktop application
+  * Support for JPEG, PNG, WebP, GIF compression
+  * Batch processing with configurable workers
+  * Config persistence and import/export
+
+ -- Terry <napoler@gmail.com>  Tue, 30 Jun 2026 01:00:00 +0800

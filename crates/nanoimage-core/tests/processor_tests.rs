@@ -232,7 +232,7 @@ fn test_batch_processor_with_config() {
     let temp_dir = tempfile::tempdir().unwrap();
     let path = temp_dir.path().join("test.jpg");
     create_test_image(&path);
-    let results = processor.process_sync(&[path.clone()]);
+    let results = processor.process_sync(std::slice::from_ref(&path));
     assert_eq!(results.len(), 1);
     assert!(results[0].success, "with_config 创建的处理器应该能正常处理文件");
 }

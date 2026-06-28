@@ -4,6 +4,7 @@ use crate::commands::output::{success, info};
 use anyhow::Result;
 use nanoimage_core::OptimizerConfig;
 
+/// config 子命令的参数
 #[derive(clap::Parser)]
 pub struct Args {
     /// 显示当前配置
@@ -23,6 +24,9 @@ pub struct Args {
     workers: Option<usize>,
 }
 
+/// 执行 config 子命令
+///
+/// 支持 show（显示配置）、reset（重置默认配置）和修改配置项
 pub fn execute(args: Args) -> Result<()> {
     if args.show {
         let config = load_config();

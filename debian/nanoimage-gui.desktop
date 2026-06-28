@@ -1,0 +1,9 @@
+[Desktop Entry]
+Name=NanoImage
+Comment=High-performance image optimizer
+Exec=nanoimage-gui
+Icon=nanoimage
+Terminal=false
+Type=Application
+Categories=Graphics;Utility;
+Keywords=image;compress;optimize;png;jpeg;webp;

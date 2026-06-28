@@ -1,0 +1,19 @@
+Package: nanoimage
+Architecture: amd64
+Depends:
+Section: utils
+Priority: optional
+Homepage: https://github.com/napoler/nanoimage
+Description: High-performance image optimizer CLI
+ NanoImage is a Rust-based image optimization tool supporting
+ JPEG, PNG, WebP compression and format conversion.
+
+Package: nanoimage-gui
+Architecture: amd64
+Depends: libc6, libxcb-render0, libxcb-shape0, libxcb-xfixes0, libxi6, libxrandr2, libasound2
+Section: utils
+Priority: optional
+Homepage: https://github.com/napoler/nanoimage
+Description: High-performance image optimizer GUI
+ NanoImage GUI is an egui-based desktop application for batch
+ image optimization with drag-and-drop support.

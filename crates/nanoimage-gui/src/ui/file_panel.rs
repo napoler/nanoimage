@@ -15,18 +15,15 @@ pub struct FileEntry {
 }
 
 impl FileEntry {
+    /// 创建新的文件条目
     pub fn new(path: PathBuf) -> Self {
         let name = path
             .file_name()
             .map(|n| n.to_string_lossy().to_string())
             .unwrap_or_else(|| "Unknown".to_string());
 
-        let size = path
-            .metadata()
-            .map(|m| format_size(m.len()))
-            .unwrap_or_else(|_| "Unknown".to_string());
-
         let original_size = path.metadata().map(|m| m.len()).unwrap_or(0);
+        let size = format_size(original_size);
 
         Self {
             path,
@@ -225,10 +222,12 @@ impl FilePanel {
             });
     }
 
+    /// 返回文件数量
     pub fn len(&self) -> usize {
         self.files.len()
     }
 
+    /// 检查文件列表是否为空
     pub fn is_empty(&self) -> bool {
         self.files.is_empty()
     }
