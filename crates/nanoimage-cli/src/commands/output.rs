@@ -87,7 +87,7 @@ pub fn file_error(name: &str, err: &str) {
     eprintln!(" {}: {}", name, err);
 }
 
-/// 打印表格（使用 Unicode 边框）
+/// 打印表格（使用 Unicode 边框，CJK 感知对齐）
 pub fn print_table(headers: &[&str], rows: Vec<Vec<String>>) {
     if rows.is_empty() {
         return;
@@ -126,16 +126,38 @@ pub fn print_table(headers: &[&str], rows: Vec<Vec<String>>) {
     // 添加 padding
     let padding: usize = 2;
 
+    // 计算总表格宽度（用于窄终端检测）
+    let total_width: usize = col_widths.iter()
+        .map(|&w: &usize| w + padding * 2)
+        .sum::<usize>()
+        + col_widths.len().saturating_sub(1);
+
+    // 如果总宽度超过 80 列，考虑截断过长的列
+    let max_terminal_width = 80;
+    let needs_truncation = total_width > max_terminal_width;
+
+    let effective_col_widths: Vec<usize> = if needs_truncation {
+        // 保留前 N-1 列不变，最后一列自动调整
+        let mut widths = col_widths.clone();
+        let last_idx = widths.len() - 1;
+        let current_val = widths[last_idx];
+        let extra = total_width - max_terminal_width + 4; // +4 为边框留空间
+        widths[last_idx] = current_val.saturating_sub(extra);
+        widths
+    } else {
+        col_widths
+    };
+
     // 构建分隔行（┼ 占 1 列宽，所以 dashes 少 1）
     let mut sep = String::from("├");
-    for &w in &col_widths {
+    for &w in &effective_col_widths {
         sep.push_str(&"─".repeat(w + padding * 2 - 1));
         sep.push('┼');
     }
 
     // 打印表头
     print!("┌");
-    for &w in &col_widths {
+    for &w in &effective_col_widths {
         print!("{}", "─".repeat(w + padding * 2 - 1));
         print!("┬");
     }
@@ -143,7 +165,7 @@ pub fn print_table(headers: &[&str], rows: Vec<Vec<String>>) {
 
     print!("│");
     for (i, h) in headers.iter().enumerate() {
-        let w = col_widths[i];
+        let w = effective_col_widths[i];
         let h_width = display_width(h);
         print!(" {}{} ", h, " ".repeat(w - h_width));
     }
@@ -156,16 +178,20 @@ pub fn print_table(headers: &[&str], rows: Vec<Vec<String>>) {
     for row in &rows {
         print!("│");
         for (i, cell) in row.iter().enumerate() {
-            let w = if i < col_widths.len() { col_widths[i] } else { display_width(cell) };
+            let w = if i < effective_col_widths.len() {
+                effective_col_widths[i]
+            } else {
+                display_width(cell)
+            };
             let c_width = display_width(cell);
-            print!(" {}{} ", cell, " ".repeat(w - c_width));
+            print!(" {}{} ", cell, " ".repeat(w.saturating_sub(c_width)));
         }
         println!("│");
     }
 
     // 底部
     print!("└");
-    for &w in &col_widths {
+    for &w in &effective_col_widths {
         print!("{}", "─".repeat(w + padding * 2 - 1));
         print!("┴");
     }

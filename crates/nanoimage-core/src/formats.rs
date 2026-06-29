@@ -21,14 +21,18 @@ impl ImageInfo {
         let format = ImageFormat::from_path(path);
 
         match format {
-            ImageFormat::Svg => Some(Self {
-                path: path.to_path_buf(),
-                format,
-                width: 0,
-                height: 0,
-                size_bytes,
-                has_transparency: false,
-            }),
+            ImageFormat::Svg => {
+                // 尝试从 SVG 文件中提取尺寸信息
+                let (width, height) = Self::extract_svg_dimensions(path);
+                Some(Self {
+                    path: path.to_path_buf(),
+                    format,
+                    width,
+                    height,
+                    size_bytes,
+                    has_transparency: true, // SVG 始终支持透明度
+                })
+            }
             _ => {
                 let img = image::open(path).ok()?;
                 let (width, height) = img.dimensions();
@@ -45,6 +49,46 @@ impl ImageInfo {
                 })
             }
         }
+    }
+
+    /// 从 SVG 文件中提取宽度和高度
+    fn extract_svg_dimensions(path: &Path) -> (u32, u32) {
+        let content = match std::fs::read_to_string(path) {
+            Ok(c) => c,
+            Err(_) => return (0, 0),
+        };
+
+        // 简单提取: 查找 width="NNN" 或 width='NNN' 或 width=NNN
+        let width = Self::extract_svg_attr(&content, "width");
+        let height = Self::extract_svg_attr(&content, "height");
+
+        match (width, height) {
+            (Some(w), Some(h)) => (w, h),
+            _ => (0, 0),
+        }
+    }
+
+    /// 从 SVG 内容中提取指定属性的数值（去除单位）
+    fn extract_svg_attr(svg: &str, attr: &str) -> Option<u32> {
+        // 查找属性名（不区分大小写）
+        let lower_svg = svg.to_lowercase();
+        let attr_lower = format!("{}=", attr);
+        let pos = lower_svg.find(&attr_lower)?;
+
+        // 从属性名之后开始查找值
+        let after_attr = &svg[pos + attr_lower.len()..];
+
+        // 跳过引号
+        let rest = after_attr.trim_start();
+        let value_start = if rest.starts_with('"') || rest.starts_with('\'') {
+            &rest[1..]
+        } else {
+            rest
+        };
+
+        // 提取连续的数字字符（可能带小数点）
+        let num_str: String = value_start.chars().take_while(|c| c.is_ascii_digit() || *c == '.').collect();
+        num_str.parse::<u32>().ok()
     }
 
     /// 人类可读的大小字符串

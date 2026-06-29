@@ -96,28 +96,36 @@ fn target_format_str(args: &Args, config: &nanoimage_core::OptimizerConfig) -> S
     }
 }
 
-/// 截断字符串以适应表格列宽
+/// 截断字符串以适应表格列宽（CJK 感知）
 fn truncate_str(s: &str, max_width: usize) -> String {
-    let mut result = String::new();
-    let mut width = 0;
-    
+    let pad = 3; // 预留 "..." 的空间
+    let target = max_width.saturating_sub(pad);
+
+    let mut width = 0usize;
+    let mut result = String::with_capacity(s.len());
+
     for c in s.chars() {
-        let char_width = if c as u32 > 0x2FF && c as u32 != 0x3030 { 2 } else { 1 };
-        if width + char_width > max_width - 3 {
+        let cw = display_char_width(c);
+        if width + cw > target {
             result.push_str("...");
             break;
         }
         result.push(c);
-        width += char_width;
+        width += cw;
     }
-    
+
     // 补齐空格
-    while width < max_width - 3 {
+    while width < target {
         result.push(' ');
         width += 1;
     }
-    
+
     result
+}
+
+/// 计算单个字符的显示宽度（CJK 字符算 2 列宽）
+fn display_char_width(c: char) -> usize {
+    if c as u32 > 0x2FF && c as u32 != 0x3030 { 2 } else { 1 }
 }
 
 pub fn execute(args: Args) -> Result<()> {

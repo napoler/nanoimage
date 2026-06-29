@@ -1,6 +1,6 @@
 //! CLI 子命令 - config
 use crate::commands::common::{load_config, save_config, config_path};
-use crate::commands::output::{success, info};
+use crate::commands::output::{success, info, error};
 use anyhow::Result;
 use nanoimage_core::OptimizerConfig;
 
@@ -46,7 +46,10 @@ pub fn execute(args: Args) -> Result<()> {
 
     if args.reset {
         let config = OptimizerConfig::default();
-        save_config(&config)?;
+        if let Err(e) = save_config(&config) {
+            error(&format!("保存配置失败: {}", e));
+            anyhow::bail!("无法保存配置到默认目录: {}", e);
+        }
         success("配置已重置为默认值");
         return Ok(());
     }
@@ -62,7 +65,20 @@ pub fn execute(args: Args) -> Result<()> {
         config.workers = w;
     }
 
-    save_config(&config)?;
+    if let Err(e) = save_config(&config) {
+        error(&format!("保存配置失败: {}", e));
+        // 提供诊断信息
+        if let Some(path) = config_path() {
+            error(&format!("尝试写入的位置: {}", path.display()));
+            if !path.exists() {
+                if let Some(parent) = path.parent() {
+                    error(&format!("配置目录不存在: {}", parent.display()));
+                    error("请手动创建目录或使用 --reset 重新初始化配置");
+                }
+            }
+        }
+        anyhow::bail!("无法保存配置: {}", e);
+    }
     success("配置已保存");
 
     if let Some(path) = config_path() {

@@ -6,7 +6,9 @@ use eframe::egui;
 use nanoimage_core::{format_size, BatchProcessor, FileStatus, OptimizerConfig, ProcessResult, Progress};
 use std::path::PathBuf;
 use std::sync::mpsc::{self, Receiver};
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::thread;
+use std::thread::JoinHandle;
 
 use ui::{file_panel::FilePanel, log_view::LogPanel, progress::ProgressPanel, settings_panel::SettingsPanel};
 
@@ -33,6 +35,10 @@ pub struct NanoImageApp {
     current_file: String,
     // worker 线程的 channel
     worker_rx: Option<Receiver<WorkerMsg>>,
+    /// 后台线程句柄（用于取消）
+    worker_handle: Option<JoinHandle<()>>,
+    /// 取消标志
+    cancel_flag: std::sync::Arc<AtomicBool>,
     /// 处理完成是否已通知
     show_completion_dialog: bool,
     /// 完成时节省的总字节数
@@ -63,6 +69,8 @@ impl NanoImageApp {
             progress: 0.0,
             current_file: String::new(),
             worker_rx: None,
+            worker_handle: None,
+            cancel_flag: std::sync::Arc::new(AtomicBool::new(false)),
             show_completion_dialog: false,
             total_saved_bytes: 0,
             config_dirty: false,
@@ -91,19 +99,24 @@ impl NanoImageApp {
         config_persistence::save_config(&self.config);
     }
 
-    /// 处理文件 (使用 channel 与后台线程通信)
+    /// 处理文件 (使用 channel 与后台线程通信，支持取消)
     fn process_files(&mut self) {
         if self.file_panel.is_empty() {
             return;
         }
 
+        // 如果已经在处理中，先取消之前的任务
+        self.cancel_processing();
+
         self.processing = true;
         self.progress = 0.0;
         self.current_file = String::new();
+        self.cancel_flag.store(false, Ordering::SeqCst);
 
         let files = self.file_panel.paths();
         let total = files.len();
         let config = self.config.clone();
+        let cancel_flag = self.cancel_flag.clone();
 
         self.log_panel.info(format!("开始处理 {} 个文件...", total));
 
@@ -111,15 +124,38 @@ impl NanoImageApp {
         let (tx, rx) = mpsc::channel::<WorkerMsg>();
         self.worker_rx = Some(rx);
 
-        // 启动后台线程
-        let _handle = thread::spawn(move || {
+        // 启动后台线程，支持取消
+        let handle = thread::spawn(move || {
             let processor = BatchProcessor::with_config(config);
             let (_total_saved, results) = processor.process_sync_with_results(&files, |progress| {
+                // 检查取消请求
+                if cancel_flag.load(Ordering::SeqCst) {
+                    return;
+                }
                 tx.send(WorkerMsg::Progress(progress)).ok();
             });
 
+            // 发送完成消息（即使被取消也发送，让 UI 知道任务已结束）
             tx.send(WorkerMsg::Completed(results)).ok();
         });
+
+        self.worker_handle = Some(handle);
+    }
+
+    /// 取消正在进行的处理
+    fn cancel_processing(&mut self) {
+        self.cancel_flag.store(true, Ordering::SeqCst);
+
+        // 等待后台线程结束
+        if let Some(handle) = self.worker_handle.take() {
+            let _ = handle.join();
+        }
+
+        self.processing = false;
+        self.progress = 0.0;
+        self.current_file = String::new();
+        self.worker_rx = None;
+        self.log_panel.warn("处理已取消".to_string());
     }
 
     /// 轮询处理 worker 消息
@@ -215,6 +251,30 @@ impl NanoImageApp {
 
 impl eframe::App for NanoImageApp {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
+        // 键盘快捷键
+        ctx.input_mut(|i| {
+            // Ctrl+Enter: 开始/停止处理
+            if i.consume_shortcut(&egui::KeyboardShortcut::new(egui::Modifiers::CTRL, egui::Key::Enter))
+                && !self.processing && !self.file_panel.is_empty()
+            {
+                self.process_files();
+            }
+
+            // Ctrl+O: 添加文件
+            if i.consume_shortcut(&egui::KeyboardShortcut::new(egui::Modifiers::CTRL, egui::Key::O)) {
+                if let Some(paths) = rfd::FileDialog::new().pick_files() {
+                    self.add_files(paths);
+                }
+            }
+
+            // Escape: 取消处理
+            if i.consume_shortcut(&egui::KeyboardShortcut::new(egui::Modifiers::NONE, egui::Key::Escape))
+                && self.processing
+            {
+                self.cancel_processing();
+            }
+        });
+
         // 轮询 worker 消息
         self.poll_worker();
 
@@ -280,14 +340,14 @@ impl eframe::App for NanoImageApp {
 
             // 按钮行
             ui.horizontal(|ui| {
-                let button_text = if self.processing { "处理中..." } else { "▶ 开始优化" };
+                let button_text = if self.processing { "处理中... [Esc]" } else { "▶ 开始优化 [Ctrl+Enter]" };
                 let can_start = !self.processing && !self.file_panel.is_empty();
 
                 if ui.add_enabled(can_start, egui::Button::new(button_text)).clicked() {
                     self.process_files();
                 }
 
-                if ui.button("添加文件").clicked() {
+                if ui.button("添加文件 [Ctrl+O]").clicked() {
                     if let Some(paths) = rfd::FileDialog::new().pick_files() {
                         self.add_files(paths);
                     }

@@ -42,6 +42,19 @@ impl Optimizer {
 
     /// 处理单个文件
     pub fn process_file(&self, path: &Path) -> ProcessResult {
+        // Validate input file exists before processing
+        if !path.exists() {
+            return ProcessResult {
+                original_path: path.to_path_buf(),
+                output_path: self.determine_output_path(path),
+                original_size: 0,
+                new_size: 0,
+                savings: 0,
+                success: false,
+                error: Some(format!("输入文件不存在: {}", path.display())),
+            };
+        }
+
         let original_path = path.to_path_buf();
         let original_size = std::fs::metadata(path)
             .map(|m| m.len())
@@ -49,6 +62,25 @@ impl Optimizer {
 
         // 确定输出路径
         let output_path = self.determine_output_path(path);
+
+        // Ensure output parent directory exists before dispatching to format handlers.
+        // This covers overwrite mode (output == input, parent always exists) and
+        // custom output_dir modes where the directory may not exist yet.
+        if let Some(parent) = output_path.parent() {
+            if !parent.as_os_str().is_empty() {
+                if let Err(e) = std::fs::create_dir_all(parent) {
+                    return ProcessResult {
+                        original_path,
+                        output_path,
+                        original_size,
+                        new_size: 0,
+                        savings: 0,
+                        success: false,
+                        error: Some(format!("无法创建输出目录: {}", e)),
+                    };
+                }
+            }
+        }
 
         // 根据格式选择处理方式
         let format = ImageFormat::from_path(path);
@@ -192,8 +224,23 @@ impl Optimizer {
         Ok(())
     }
 
-    /// 处理 SVG
+    /// 处理 SVG — 验证内容有效性后复制
     fn process_svg(&self, input: &Path, output: &Path) -> anyhow::Result<()> {
+        // 读取 SVG 内容并验证它是有效的 XML/SVG
+        let svg_content = std::fs::read_to_string(input)
+            .with_context(|| format!("无法读取SVG文件: {:?}", input))?;
+
+        // 基本验证：SVG 文件应包含 <svg 标签
+        let trimmed = svg_content.trim();
+        let has_svg_tag = trimmed.starts_with("<svg")
+            || trimmed.find(|c: char| c != '\n' && c != '\r' && c != ' ')
+                .map(|pos| trimmed[pos..].starts_with("<svg"))
+                .unwrap_or(false);
+
+        if !has_svg_tag {
+            return Err(anyhow::anyhow!("文件不是有效的 SVG: 缺少 <svg> 根元素"));
+        }
+
         if let Some(parent) = output.parent() {
             std::fs::create_dir_all(parent)?;
         }
