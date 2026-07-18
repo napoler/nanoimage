@@ -96,7 +96,9 @@ pub fn print_table(headers: &[&str], rows: Vec<Vec<String>>) {
     /// 计算字符串的显示宽度（CJK 字符算 2 列宽）
     fn display_width(s: &str) -> usize {
         s.chars().map(|c| {
-            if c as u32 > 0x2FF && c as u32 != 0x3030 {
+            // CJK Unified Ideographs start at U+4E00; treat code points above that
+            // (and excluding the half-width katakana-middle dot U+3030) as double-width.
+            if c as u32 > 0x4E00 && c as u32 != 0x3030 {
                 2
             } else {
                 1

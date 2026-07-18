@@ -6,30 +6,12 @@ use crate::optimizer::Optimizer;
 use crate::config::OptimizerConfig;
 
 /// 检查文件是否已被优化（通过比较文件修改时间与文件名）
-/// 如果文件名包含 "_optimized" 后缀，或者文件修改时间在最近 60 秒内（可能是刚处理过的），
-/// 则认为已优化。更可靠的方案是使用内容哈希。
+/// 如果文件名包含 "_optimized" 后缀，则认为已优化。
 fn is_already_optimized(path: &Path) -> bool {
     // 检查文件名是否包含优化标记
-    if path.file_stem()
+    path.file_stem()
         .map(|s| s.to_string_lossy().contains("_optimized"))
         .unwrap_or(false)
-    {
-        return true;
-    }
-
-    // 检查文件修改时间：如果文件在最近 60 秒内被修改过，
-    // 可能是刚刚被批量处理器优化的，跳过以避免重复处理
-    if let Ok(metadata) = std::fs::metadata(path) {
-        if let Ok(modified) = metadata.modified() {
-            if let Ok(elapsed) = modified.elapsed() {
-                if elapsed.as_secs() < 60 {
-                    return true;
-                }
-            }
-        }
-    }
-
-    false
 }
 
 /// 进度信息
@@ -234,6 +216,7 @@ impl BatchProcessor {
         if recursive {
             for entry in walkdir::WalkDir::new(dir)
                 .follow_links(true)
+                .max_depth(32)
                 .into_iter()
                 .filter_map(|e| e.ok())
             {

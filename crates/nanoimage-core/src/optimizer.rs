@@ -136,7 +136,13 @@ impl Optimizer {
 
         // 默认: 同目录下的 optimized 子文件夹
         let parent = input_path.parent().unwrap_or(Path::new("."));
-        let base = parent.join("optimized").join(input_path.file_name().unwrap_or_default());
+        // 防止嵌套：如果已经在一个 optimized 子目录中，不再重复添加
+        let target_dir = if parent.file_name()
+            .and_then(|n| n.to_str())
+            .map(|n| n == "optimized")
+            .unwrap_or(false)
+        { parent.to_path_buf() } else { parent.join("optimized") };
+        let base = target_dir.join(input_path.file_name().unwrap_or_default());
         // Strip leading "./" for cleaner paths
         if let Ok(stripped) = base.strip_prefix("./") {
             PathBuf::from(stripped)
@@ -230,12 +236,14 @@ impl Optimizer {
         let svg_content = std::fs::read_to_string(input)
             .with_context(|| format!("无法读取SVG文件: {:?}", input))?;
 
-        // 基本验证：SVG 文件应包含 <svg 标签
-        let trimmed = svg_content.trim();
-        let has_svg_tag = trimmed.starts_with("<svg")
-            || trimmed.find(|c: char| c != '\n' && c != '\r' && c != ' ')
-                .map(|pos| trimmed[pos..].starts_with("<svg"))
-                .unwrap_or(false);
+        // 基本验证：SVG 文件应包含 <svg> 标签
+        // 跳过前导空白和 XML 注释后再检查，防止 HTML 注释绕过
+        let has_svg_tag = svg_content
+            .trim_start()
+            .trim_start_matches("<!--")
+            .trim_start()
+            .trim_start_matches(|c: char| c != '<')
+            .starts_with("<svg");
 
         if !has_svg_tag {
             return Err(anyhow::anyhow!("文件不是有效的 SVG: 缺少 <svg> 根元素"));

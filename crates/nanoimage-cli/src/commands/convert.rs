@@ -57,11 +57,16 @@ pub fn execute(args: Args) -> Result<()> {
     let result = optimizer.process_file(&args.input);
 
     if result.success {
-        // 如果输出路径不匹配，复制文件以匹配用户指定的输出路径
-        // 使用 copy + remove 而不是 rename，避免跨文件系统问题
+        // 如果输出路径不匹配，移动文件到用户指定的输出路径
+        // 优先使用 rename（原子操作），失败时回退到 copy+remove
         if result.output_path != args.output {
-            std::fs::copy(&result.output_path, &args.output)?;
-            std::fs::remove_file(&result.output_path).ok();
+            if let Err(e) = std::fs::rename(&result.output_path, &args.output) {
+                // 跨文件系统情况：rename 失败，回退到 copy+remove
+                tracing::warn!("rename 失败 (可能跨文件系统)，使用 copy+remove: {}", e);
+                std::fs::copy(&result.output_path, &args.output)?;
+                std::fs::remove_file(&result.output_path)
+                    .map_err(|e| anyhow::anyhow!("清理临时文件失败: {}", e))?;
+            }
         }
         success(&format!("✓ 转换完成: {} → {}", args.input.display(), args.output.display()));
     } else {

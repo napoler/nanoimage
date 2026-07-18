@@ -125,7 +125,9 @@ fn truncate_str(s: &str, max_width: usize) -> String {
 
 /// 计算单个字符的显示宽度（CJK 字符算 2 列宽）
 fn display_char_width(c: char) -> usize {
-    if c as u32 > 0x2FF && c as u32 != 0x3030 { 2 } else { 1 }
+    // CJK Unified Ideographs start at U+4E00; treat code points above that
+    // (and excluding the half-width katakana-middle dot U+3030) as double-width.
+    if c as u32 > 0x4E00 && c as u32 != 0x3030 { 2 } else { 1 }
 }
 
 pub fn execute(args: Args) -> Result<()> {
