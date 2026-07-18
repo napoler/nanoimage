@@ -40,3 +40,10 @@ openspec/
 debian-package/
 *.deb
 test_output/
+
+# Rust
+Cargo.lock
+
+# Secrets
+.env
+.env.*

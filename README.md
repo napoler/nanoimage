@@ -27,7 +27,7 @@ nanoimage settings --quality 90 --workers 8
 
 | 功能 | CLI | GUI | 说明 |
 |------|-----|-----|------|
-| JPEG 压缩 | ✅ | ✅ | mozjpeg 质量可调 |
+| JPEG 压缩 | ✅ | ✅ | `image` crate encoder, quality configurable |
 | PNG 优化 | ✅ | ✅ | oxipng Zopfli 压缩 |
 | WebP 转换 | ✅ | ✅ | RGBA 支持 |
 | GIF 处理 | ✅ | ✅ | 基础压缩 |
@@ -57,7 +57,7 @@ sudo cp target/release/nanoimage /usr/local/bin/
 
 ### Windows
 
-下载 [release 中的 .exe](https://github.com/napoler/nanoimage/releases) 或使用源码构建：
+下载 [release 中的 .exe](https://github.com/napoler/nanoimage/releases/latest) 或使用源码构建：
 
 ```bash
 cargo build --release
@@ -102,3 +102,7 @@ nanoimage/
 ## 许可证
 
 [MIT License](LICENSE)
+
+## 贡献
+
+欢迎提交 Issue 和 Pull Request。请先阅读 [CONTRIBUTING.md](CONTRIBUTING.md)。

@@ -174,7 +174,10 @@ impl BatchProcessor {
         let mut handles = Vec::with_capacity(files.len());
 
         for (idx, file) in files.into_iter().enumerate() {
-            let permit = semaphore.clone().acquire_owned().await.unwrap();
+            // Acquire semaphore permit; if semaphore is closed (shutdown), skip this file
+            let Ok(permit) = semaphore.clone().acquire_owned().await else {
+                continue;
+            };
             let optimizer = optimizer.clone();
             let progress_tx = progress_tx.clone();
 

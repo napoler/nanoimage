@@ -25,9 +25,9 @@
 |------|-------|------|
 | 图像加载/保存 | `image` | 基础格式支持 (JPG/PNG/WebP/GIF/BMP) |
 | PNG压缩 | `oxipng` | Rust 实现，接近 pngquant 效果 |
-| JPG压缩 | `mozjpeg` (sys) | MozJPEG 绑定，高质量有损压缩 |
+| JPG压缩 | `image` crate | `JpegEncoder`，质量可调 |
 | WebP编码 | `webp` | 官方 WebP 编码器 Rust 绑定 |
-| SVG优化 | `resvg` + `svgo-api` | 矢量图处理 |
+| SVG处理 | std::fs copy | SVG 直通（验证格式后原样复制） |
 | CLI解析 | `clap` | 结构化命令行参数 |
 | GUI框架 | `egui` + `eframe` | 即时模式跨平台 UI |
 | 异步运行时 | `tokio` | 多线程并发处理 |
@@ -49,6 +49,8 @@
 nanoimage/
 ├── Cargo.toml          # Workspace 配置
 ├── SPEC.md             # 本文档
+├── CONTRIBUTING.md     # 贡献指南
+├── CHANGELOG.md        # 版本变更
 │
 ├── crates/
 │   ├── nanoimage-core/       # 核心库（共享）
@@ -59,34 +61,36 @@ nanoimage/
 │   │   │   ├── processor.rs   # 批量处理逻辑
 │   │   │   ├── formats.rs     # 格式检测/转换
 │   │   │   └── config.rs      # 配置结构
-│   │   └── benches/          # 性能基准测试
+│   │   ├── tests/             # 集成测试
+│   │   └── benches/           # 性能基准测试
 │   │
 │   ├── nanoimage-cli/         # CLI 工具
 │   │   ├── Cargo.toml
 │   │   └── src/
 │   │       ├── main.rs        # 入口
-│   │       ├── commands/      # 子命令
-│   │       │   ├── compress.rs
-│   │       │   ├── batch.rs
-│   │       │   └── convert.rs
-│   │       └── output.rs      # 彩色输出
+│   │       └── commands/      # 子命令
+│   │           ├── compress.rs
+│   │           ├── batch.rs
+│   │           ├── convert.rs
+│   │           ├── config_cmd.rs
+│   │           ├── common.rs
+│   │           ├── output.rs
+│   │           └── mod.rs
 │   │
 │   └── nanoimage-gui/         # GUI 应用
 │       ├── Cargo.toml
 │       └── src/
 │           ├── main.rs        # eframe 入口
-│           ├── app.rs         # 主应用状态
-│           ├── ui/            # UI 组件
-│           │   ├── file_panel.rs
-│           │   ├── settings_panel.rs
-│           │   ├── progress.rs
-│           │   └── log_view.rs
-│           └── i18n.rs        # 国际化
+│           ├── lib.rs         # 应用状态 + UI 组合
+│           ├── config_persistence.rs
+│           └── ui/            # UI 组件
+│               ├── mod.rs
+│               ├── file_panel.rs
+│               ├── settings_panel.rs
+│               ├── progress.rs
+│               └── log_view.rs
 │
-├── assets/                    # 资源文件
-│   └── icons/
-│
-└── tests/                     # 集成测试
+└── .github/workflows/ci.yml   # CI 自动化
 ```
 
 ### 3.1 数据流
@@ -126,27 +130,46 @@ nanoimage/
 
 ### 4.1 nanoimage-core
 
-```rust
 // 核心优化器
 pub struct Optimizer {
     config: OptimizerConfig,
-    // 内部工具检测
 }
 
 impl Optimizer {
-    pub fn process_file(&self, path: &Path) -> Result<ProcessResult>;
-    pub fn process_batch(&self, paths: &[Path]) -> Vec<ProcessResult>;
+    pub fn new(config: OptimizerConfig) -> Self;
+    pub fn with_default() -> Self;
+    pub fn process_file(&self, path: &Path) -> ProcessResult;
+    pub fn config(&self) -> &OptimizerConfig;
+    pub fn set_config(&mut self, config: OptimizerConfig);
 }
 
 // 配置结构
 #[derive(Serialize, Deserialize)]
 pub struct OptimizerConfig {
-    pub quality: u8,          // 1-100
+    pub mode: CompressionMode,
+    pub quality: Quality,
     pub max_width: Option<u32>,
     pub max_height: Option<u32>,
     pub format: OutputFormat,
     pub preserve_metadata: bool,
+    pub overwrite: bool,
+    pub output_dir: Option<PathBuf>,
+    pub skip_failed: bool,
     pub workers: usize,
+}
+
+// 质量配置
+#[derive(Serialize, Deserialize)]
+pub struct Quality {
+    pub lossy: u8,     // 有损质量 1-100
+    pub lossless: u8,  // 无损等级 0-8
+}
+
+// 压缩模式
+pub enum CompressionMode {
+    Lossy,     // 有损压缩
+    Lossless,  // 无损压缩
+    Smart,     // 自动选择
 }
 
 // 处理结果
@@ -155,7 +178,7 @@ pub struct ProcessResult {
     pub output_path: PathBuf,
     pub original_size: u64,
     pub new_size: u64,
-    pub savings: u64,
+    pub savings: i64,  // 负数表示文件变大
     pub success: bool,
     pub error: Option<String>,
 }
@@ -165,18 +188,20 @@ pub struct ProcessResult {
 
 | 格式 | 策略 |
 |------|------|
-| JPEG | mozjpeg 有损/无损 → `image` crate 保存 |
+| JPEG | `image` crate `JpegEncoder` |
 | PNG | oxipng 优化 (Zopfli+Delta) |
 | WebP | `webp` crate 编码 |
 | GIF | `image` crate 优化 |
-| SVG | resvg 渲染 + svgo 优化 |
+| SVG | 直通（验证格式后原样复制） |
 | BMP/TIFF | `image` crate 直通 |
 
 ### 4.3 并发模型
 
 ```rust
 // 使用 tokio 进行并行处理
-pub async fn process_batch_async(
+// BatchProcessor 使用 tokio::sync::Semaphore 控制并发
+// async fn process_batch_async 已移至 BatchProcessor
+// pub async fn process_batch_async(
     files: Vec<PathBuf>,
     config: &OptimizerConfig,
     progress_callback: impl Fn(Progress),
