@@ -44,6 +44,10 @@ tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 walkdir = "2"
 
+# Security: override transitive vulns
+quick-xml = ">=0.41.0"
+crossbeam-epoch = ">=0.9.20"
+
 [profile.release]
 lto = true
 codegen-units = 1
