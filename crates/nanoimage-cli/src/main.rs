@@ -1,11 +1,11 @@
 //! NanoImage CLI - 命令行图像优化工具
-use clap::{Parser, Subcommand};
 use anyhow::Result;
+use clap::{Parser, Subcommand};
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
 mod commands;
 
-use commands::{compress, batch, convert, config_cmd};
+use commands::{batch, compress, config_cmd, convert};
 
 /// NanoImage - 高性能图像优化工具
 #[derive(Parser)]
@@ -37,8 +37,10 @@ fn main() -> Result<()> {
     // 初始化日志
     tracing_subscriber::registry()
         .with(tracing_subscriber::fmt::layer())
-        .with(tracing_subscriber::EnvFilter::from_default_env()
-            .add_directive("nanoimage=info".parse()?))
+        .with(
+            tracing_subscriber::EnvFilter::from_default_env()
+                .add_directive("nanoimage=info".parse()?),
+        )
         .init();
 
     let cli = Cli::parse();

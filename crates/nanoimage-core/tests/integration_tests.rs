@@ -1,6 +1,6 @@
 //! Integration tests for nanoimage-core
-use std::path::PathBuf;
 use nanoimage_core::{OptimizerConfig, ProcessResult};
+use std::path::PathBuf;
 
 /// Test ProcessResult.savings_percent() calculation
 #[test]

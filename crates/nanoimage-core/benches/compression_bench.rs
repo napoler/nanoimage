@@ -6,7 +6,7 @@ use std::path::Path;
 fn benchmark_jpeg_compression(c: &mut Criterion) {
     let config = OptimizerConfig::default();
     let optimizer = Optimizer::new(config);
-    
+
     c.bench_function("JPEG compression", |b| {
         b.iter(|| {
             let input = black_box(Path::new("benches/test_data/test.jpg"));
@@ -18,7 +18,7 @@ fn benchmark_jpeg_compression(c: &mut Criterion) {
 fn benchmark_png_compression(c: &mut Criterion) {
     let config = OptimizerConfig::default();
     let optimizer = Optimizer::new(config);
-    
+
     c.bench_function("PNG compression", |b| {
         b.iter(|| {
             let input = black_box(Path::new("benches/test_data/test.png"));
@@ -30,7 +30,7 @@ fn benchmark_png_compression(c: &mut Criterion) {
 fn benchmark_webp_compression(c: &mut Criterion) {
     let config = OptimizerConfig::default();
     let optimizer = Optimizer::new(config);
-    
+
     c.bench_function("WebP compression", |b| {
         b.iter(|| {
             let input = black_box(Path::new("benches/test_data/test.webp"));

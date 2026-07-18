@@ -76,9 +76,7 @@ pub struct FilePanel {
 
 impl FilePanel {
     pub fn new() -> Self {
-        Self {
-            files: Vec::new(),
-        }
+        Self { files: Vec::new() }
     }
 
     /// 添加文件
@@ -194,30 +192,51 @@ impl FilePanel {
                 // 总计摘要行
                 ui.separator();
 
-                let completed = self.files.iter().filter(|f| f.status == FileStatus::Completed).count();
-                let failed = self.files.iter().filter(|f| matches!(f.status, FileStatus::Error(_))).count();
+                let completed = self
+                    .files
+                    .iter()
+                    .filter(|f| f.status == FileStatus::Completed)
+                    .count();
+                let failed = self
+                    .files
+                    .iter()
+                    .filter(|f| matches!(f.status, FileStatus::Error(_)))
+                    .count();
                 let total_original: u64 = self.files.iter().map(|f| f.original_size).sum();
-                let total_new: u64 = self.files.iter()
-                    .filter_map(|f| f.new_size)
-                    .sum();
+                let total_new: u64 = self.files.iter().filter_map(|f| f.new_size).sum();
                 let total_saved = total_original.saturating_sub(total_new);
 
                 if completed > 0 {
                     ui.horizontal(|ui| {
                         ui.strong("总计:");
-                        ui.label(format!("原始 {} → 压缩后 {}", format_size(total_original), format_size(total_new)));
+                        ui.label(format!(
+                            "原始 {} → 压缩后 {}",
+                            format_size(total_original),
+                            format_size(total_new)
+                        ));
                         let pct = if total_original > 0 {
-                            format!("{:.1}%", (total_saved as f64 / total_original as f64) * 100.0)
+                            format!(
+                                "{:.1}%",
+                                (total_saved as f64 / total_original as f64) * 100.0
+                            )
                         } else {
                             "0.0%".to_string()
                         };
-                        ui.label(egui::RichText::new(format!("节省 {}", format_size(total_saved))).color(egui::Color32::from_rgb(34, 197, 94)));
-                        ui.label(egui::RichText::new(pct).color(egui::Color32::from_rgb(34, 197, 94)));
+                        ui.label(
+                            egui::RichText::new(format!("节省 {}", format_size(total_saved)))
+                                .color(egui::Color32::from_rgb(34, 197, 94)),
+                        );
+                        ui.label(
+                            egui::RichText::new(pct).color(egui::Color32::from_rgb(34, 197, 94)),
+                        );
                     });
                 }
 
                 if failed > 0 {
-                    ui.label(egui::RichText::new(format!("⚠ {} 个文件处理失败", failed)).color(egui::Color32::from_rgb(239, 68, 68)));
+                    ui.label(
+                        egui::RichText::new(format!("⚠ {} 个文件处理失败", failed))
+                            .color(egui::Color32::from_rgb(239, 68, 68)),
+                    );
                 }
             });
     }

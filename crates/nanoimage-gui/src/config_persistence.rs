@@ -66,8 +66,7 @@ pub fn save_config(config: &OptimizerConfig) {
 /// 从给定文件路径加载 OptimizerConfig，失败时返回错误信息
 #[allow(dead_code)]
 pub fn load_config_from_path(path: &Path) -> Result<OptimizerConfig, String> {
-    OptimizerConfig::load_from_file(path)
-        .map_err(|e| format!("加载配置失败: {}", e))
+    OptimizerConfig::load_from_file(path).map_err(|e| format!("加载配置失败: {}", e))
 }
 
 /// 保存配置到指定路径
@@ -75,6 +74,7 @@ pub fn load_config_from_path(path: &Path) -> Result<OptimizerConfig, String> {
 /// 将配置保存到给定文件路径，失败时返回错误信息
 #[allow(dead_code)]
 pub fn save_config_to_path(config: &OptimizerConfig, path: &Path) -> Result<(), String> {
-    config.save_to_file(path)
+    config
+        .save_to_file(path)
         .map_err(|e| format!("保存配置失败: {}", e))
 }

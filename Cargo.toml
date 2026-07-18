@@ -11,6 +11,10 @@ version = "0.1.0"
 edition = "2021"
 authors = ["Terry"]
 license = "MIT"
+description = "High-performance image optimizer — JPEG/PNG/WebP batch compression and format conversion"
+repository = "https://github.com/napoler/nanoimage"
+keywords = ["image", "optimization", "compression", "cli", "gui"]
+categories = ["multimedia::images", "command-line-utilities"]
 
 [workspace.dependencies]
 # Core dependencies

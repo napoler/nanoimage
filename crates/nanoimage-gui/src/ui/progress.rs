@@ -18,7 +18,9 @@ impl ProgressPanel {
         if processing {
             ui.horizontal(|ui| {
                 ui.label("处理进度:");
-                ui.add(egui::ProgressBar::new(progress / 100.0).text(format!("{:.*}%", 1, progress)));
+                ui.add(
+                    egui::ProgressBar::new(progress / 100.0).text(format!("{:.*}%", 1, progress)),
+                );
             });
 
             if !self.current_file.is_empty() {

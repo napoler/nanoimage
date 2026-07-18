@@ -1,9 +1,9 @@
 //! 批量处理器
+use crate::config::OptimizerConfig;
+use crate::optimizer::Optimizer;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use tokio::sync::mpsc;
-use crate::optimizer::Optimizer;
-use crate::config::OptimizerConfig;
 
 /// 检查文件是否已被优化（通过比较文件修改时间与文件名）
 /// 如果文件名包含 "_optimized" 后缀，则认为已优化。
@@ -76,11 +76,15 @@ impl BatchProcessor {
             }
 
             let result = self.optimizer.process_file(file);
-            
+
             if result.success {
                 results.push(result);
             } else if skip_failed {
-                eprintln!("跳过失败文件 {}: {}", file.display(), result.error.as_ref().unwrap_or(&String::from("未知错误")));
+                eprintln!(
+                    "跳过失败文件 {}: {}",
+                    file.display(),
+                    result.error.as_ref().unwrap_or(&String::from("未知错误"))
+                );
                 failed_count += 1;
             } else {
                 results.push(result);
@@ -103,7 +107,8 @@ impl BatchProcessor {
             let progress = Progress {
                 current: idx + 1,
                 total,
-                current_file: path.file_name()
+                current_file: path
+                    .file_name()
                     .map(|n| n.to_string_lossy().to_string())
                     .unwrap_or_default(),
                 bytes_processed: result.original_size,
@@ -137,7 +142,8 @@ impl BatchProcessor {
             let progress = Progress {
                 current: idx + 1,
                 total,
-                current_file: path.file_name()
+                current_file: path
+                    .file_name()
                     .map(|n| n.to_string_lossy().to_string())
                     .unwrap_or_default(),
                 bytes_processed: result.original_size,
@@ -177,7 +183,11 @@ impl BatchProcessor {
                 let progress = Progress {
                     current: idx + 1,
                     total,
-                    current_file: file.file_name().unwrap_or_default().to_string_lossy().to_string(),
+                    current_file: file
+                        .file_name()
+                        .unwrap_or_default()
+                        .to_string_lossy()
+                        .to_string(),
                     bytes_processed: result.original_size,
                     bytes_saved: result.savings.max(0) as u64,
                 };
@@ -222,7 +232,8 @@ impl BatchProcessor {
             {
                 if entry.file_type().is_file() {
                     if let Some(ext) = entry.path().extension() {
-                        if extensions.contains(&ext.to_str().unwrap_or("").to_lowercase().as_str()) {
+                        if extensions.contains(&ext.to_str().unwrap_or("").to_lowercase().as_str())
+                        {
                             images.push(entry.path().to_path_buf());
                         }
                     }
@@ -234,7 +245,9 @@ impl BatchProcessor {
                     let path = entry.path();
                     if path.is_file() {
                         if let Some(ext) = path.extension() {
-                            if extensions.contains(&ext.to_str().unwrap_or("").to_lowercase().as_str()) {
+                            if extensions
+                                .contains(&ext.to_str().unwrap_or("").to_lowercase().as_str())
+                            {
                                 images.push(path);
                             }
                         }

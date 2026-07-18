@@ -85,9 +85,7 @@ impl LogPanel {
                 }
             });
 
-        if !self.entries.is_empty()
-            && ui.button("清空日志").clicked()
-        {
+        if !self.entries.is_empty() && ui.button("清空日志").clicked() {
             self.clear();
         }
     }

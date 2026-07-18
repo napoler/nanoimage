@@ -3,14 +3,14 @@
 //! 提供图像压缩、格式转换、批量处理的核心功能
 
 pub mod config;
-pub mod optimizer;
 pub mod formats;
+pub mod optimizer;
 pub mod processor;
 
-pub use config::{OptimizerConfig, OutputFormat, Quality, CompressionMode};
+pub use config::{CompressionMode, OptimizerConfig, OutputFormat, Quality};
+pub use formats::format_size;
 pub use optimizer::{Optimizer, ProcessResult};
 pub use processor::{BatchProcessor, Progress};
-pub use formats::format_size;
 
 /// 图像格式
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -26,7 +26,12 @@ pub enum ImageFormat {
 
 impl ImageFormat {
     pub fn from_path(path: &std::path::Path) -> Self {
-        match path.extension().and_then(|e| e.to_str()).map(|s| s.to_lowercase()).as_deref() {
+        match path
+            .extension()
+            .and_then(|e| e.to_str())
+            .map(|s| s.to_lowercase())
+            .as_deref()
+        {
             Some("jpg") | Some("jpeg") => ImageFormat::Jpeg,
             Some("png") => ImageFormat::Png,
             Some("webp") => ImageFormat::WebP,

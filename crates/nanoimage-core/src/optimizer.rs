@@ -1,8 +1,8 @@
 //! 图像优化器核心
-use std::path::{Path, PathBuf};
-use anyhow::Context;
 use crate::config::OptimizerConfig;
 use crate::ImageFormat;
+use anyhow::Context;
+use std::path::{Path, PathBuf};
 
 /// 处理结果
 #[derive(Debug, Clone)]
@@ -56,9 +56,7 @@ impl Optimizer {
         }
 
         let original_path = path.to_path_buf();
-        let original_size = std::fs::metadata(path)
-            .map(|m| m.len())
-            .unwrap_or(0);
+        let original_size = std::fs::metadata(path).map(|m| m.len()).unwrap_or(0);
 
         // 确定输出路径
         let output_path = self.determine_output_path(path);
@@ -137,11 +135,16 @@ impl Optimizer {
         // 默认: 同目录下的 optimized 子文件夹
         let parent = input_path.parent().unwrap_or(Path::new("."));
         // 防止嵌套：如果已经在一个 optimized 子目录中，不再重复添加
-        let target_dir = if parent.file_name()
+        let target_dir = if parent
+            .file_name()
             .and_then(|n| n.to_str())
             .map(|n| n == "optimized")
             .unwrap_or(false)
-        { parent.to_path_buf() } else { parent.join("optimized") };
+        {
+            parent.to_path_buf()
+        } else {
+            parent.join("optimized")
+        };
         let base = target_dir.join(input_path.file_name().unwrap_or_default());
         // Strip leading "./" for cleaner paths
         if let Ok(stripped) = base.strip_prefix("./") {
@@ -158,8 +161,7 @@ impl Optimizer {
 
     /// 处理 JPEG
     fn process_jpeg(&self, input: &Path, output: &Path) -> anyhow::Result<()> {
-        let img = image::open(input)
-            .with_context(|| format!("无法加载图像: {:?}", input))?;
+        let img = image::open(input).with_context(|| format!("无法加载图像: {:?}", input))?;
 
         if let Some(parent) = output.parent() {
             std::fs::create_dir_all(parent)?;
@@ -181,13 +183,12 @@ impl Optimizer {
         }
 
         // 读取原始 PNG 数据
-        let png_data = std::fs::read(input)
-            .with_context(|| format!("无法读取PNG: {:?}", input))?;
+        let png_data = std::fs::read(input).with_context(|| format!("无法读取PNG: {:?}", input))?;
 
         // oxipng 优化
         let opts = oxipng::Options::default();
-        let optimized = oxipng::optimize_from_memory(&png_data, &opts)
-            .with_context(|| "oxipng 优化失败")?;
+        let optimized =
+            oxipng::optimize_from_memory(&png_data, &opts).with_context(|| "oxipng 优化失败")?;
 
         std::fs::write(output, optimized)?;
 
@@ -196,8 +197,7 @@ impl Optimizer {
 
     /// 处理 WebP
     fn process_webp(&self, input: &Path, output: &Path) -> anyhow::Result<()> {
-        let img = image::open(input)
-            .with_context(|| format!("无法加载图像: {:?}", input))?;
+        let img = image::open(input).with_context(|| format!("无法加载图像: {:?}", input))?;
 
         if let Some(parent) = output.parent() {
             std::fs::create_dir_all(parent)?;
@@ -218,8 +218,7 @@ impl Optimizer {
 
     /// 处理 GIF
     fn process_gif(&self, input: &Path, output: &Path) -> anyhow::Result<()> {
-        let img = image::open(input)
-            .with_context(|| format!("无法加载图像: {:?}", input))?;
+        let img = image::open(input).with_context(|| format!("无法加载图像: {:?}", input))?;
 
         if let Some(parent) = output.parent() {
             std::fs::create_dir_all(parent)?;
@@ -268,7 +267,7 @@ impl Optimizer {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{CompressionMode, Quality, OutputFormat};
+    use crate::{CompressionMode, OutputFormat, Quality};
     use std::fs;
 
     /// 辅助函数：创建一个 100x100 的红色 RGB 测试图片并保存到指定路径
@@ -359,7 +358,10 @@ mod tests {
         assert!(result.success, "WebP 处理应该成功");
         assert!(result.output_path.exists(), "输出文件应该存在");
         assert!(result.new_size > 0, "输出文件大小应该大于 0");
-        assert!(result.new_size <= original_size, "输出文件不应该比原始文件大");
+        assert!(
+            result.new_size <= original_size,
+            "输出文件不应该比原始文件大"
+        );
     }
 
     /// 测试不支持的格式：创建 .xyz 文件，验证 process_file 返回 success=false
@@ -374,8 +376,11 @@ mod tests {
 
         assert!(!result.success, "不支持的格式应该返回失败");
         assert!(result.error.is_some(), "应该包含错误信息");
-        assert!(result.error.as_ref().unwrap().contains("不支持的格式"),
-            "错误信息应包含 '不支持的格式'，实际: {:?}", result.error);
+        assert!(
+            result.error.as_ref().unwrap().contains("不支持的格式"),
+            "错误信息应包含 '不支持的格式'，实际: {:?}",
+            result.error
+        );
     }
 
     /// 测试配置序列化：创建 OptimizerConfig，序列化为 JSON 字符串，反序列化验证字段一致
@@ -383,7 +388,10 @@ mod tests {
     fn test_config_serialization() {
         let config = OptimizerConfig {
             mode: CompressionMode::Lossless,
-            quality: Quality { lossy: 90, lossless: 95 },
+            quality: Quality {
+                lossy: 90,
+                lossless: 95,
+            },
             max_width: Some(1920),
             max_height: Some(1080),
             format: OutputFormat::WebP,

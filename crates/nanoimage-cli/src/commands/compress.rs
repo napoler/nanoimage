@@ -1,9 +1,9 @@
 //! CLI 子命令 - compress
 use crate::commands::common::load_config;
-use crate::commands::output::{success, error};
+use crate::commands::output::{error, success};
 use anyhow::Result;
-use std::path::PathBuf;
 use nanoimage_core::{format_size, Optimizer};
+use std::path::PathBuf;
 
 /// compress 子命令的参数
 #[derive(clap::Parser)]
@@ -59,7 +59,11 @@ pub fn execute(args: Args) -> Result<()> {
             result.savings_percent()
         ));
     } else {
-        error(&format!("✗ 处理失败: {} - {}", args.input.display(), result.error.unwrap_or_default()));
+        error(&format!(
+            "✗ 处理失败: {} - {}",
+            args.input.display(),
+            result.error.unwrap_or_default()
+        ));
     }
 
     Ok(())

@@ -95,15 +95,17 @@ pub fn print_table(headers: &[&str], rows: Vec<Vec<String>>) {
 
     /// 计算字符串的显示宽度（CJK 字符算 2 列宽）
     fn display_width(s: &str) -> usize {
-        s.chars().map(|c| {
-            // CJK Unified Ideographs start at U+4E00; treat code points above that
-            // (and excluding the half-width katakana-middle dot U+3030) as double-width.
-            if c as u32 > 0x4E00 && c as u32 != 0x3030 {
-                2
-            } else {
-                1
-            }
-        }).sum()
+        s.chars()
+            .map(|c| {
+                // CJK Unified Ideographs start at U+4E00; treat code points above that
+                // (and excluding the half-width katakana-middle dot U+3030) as double-width.
+                if c as u32 > 0x4E00 && c as u32 != 0x3030 {
+                    2
+                } else {
+                    1
+                }
+            })
+            .sum()
     }
 
     let num_cols = headers.len();
@@ -129,7 +131,8 @@ pub fn print_table(headers: &[&str], rows: Vec<Vec<String>>) {
     let padding: usize = 2;
 
     // 计算总表格宽度（用于窄终端检测）
-    let total_width: usize = col_widths.iter()
+    let total_width: usize = col_widths
+        .iter()
         .map(|&w: &usize| w + padding * 2)
         .sum::<usize>()
         + col_widths.len().saturating_sub(1);

@@ -1,6 +1,6 @@
 //! Tests for config module
+use nanoimage_core::{CompressionMode, OptimizerConfig, OutputFormat, Quality};
 use std::path::PathBuf;
-use nanoimage_core::{OptimizerConfig, CompressionMode, OutputFormat, Quality};
 
 /// Test that default OptimizerConfig has correct values
 #[test]
@@ -28,20 +28,29 @@ fn test_effective_quality_lossy() {
 
 #[test]
 fn test_effective_quality_lossless() {
-    let config = nanoimage_core::OptimizerConfig { mode: CompressionMode::Lossless, ..Default::default() };
+    let config = nanoimage_core::OptimizerConfig {
+        mode: CompressionMode::Lossless,
+        ..Default::default()
+    };
     assert_eq!(config.effective_quality(), 100);
 }
 
 #[test]
 fn test_effective_quality_smart() {
-    let config = nanoimage_core::OptimizerConfig { mode: CompressionMode::Smart, ..Default::default() };
+    let config = nanoimage_core::OptimizerConfig {
+        mode: CompressionMode::Smart,
+        ..Default::default()
+    };
     // Smart mode uses lossy quality
     assert_eq!(config.effective_quality(), 85);
 }
 
 #[test]
 fn test_effective_quality_smart_custom_lossy() {
-    let mut config = nanoimage_core::OptimizerConfig { mode: CompressionMode::Smart, ..Default::default() };
+    let mut config = nanoimage_core::OptimizerConfig {
+        mode: CompressionMode::Smart,
+        ..Default::default()
+    };
     config.quality.lossy = 90;
     assert_eq!(config.effective_quality(), 90);
 }
@@ -103,7 +112,10 @@ fn test_compression_mode_serde_roundtrip_smart() {
 /// Test Quality serde roundtrip
 #[test]
 fn test_quality_serde_roundtrip() {
-    let quality = Quality { lossy: 90, lossless: 95 };
+    let quality = Quality {
+        lossy: 90,
+        lossless: 95,
+    };
     let json = serde_json::to_string(&quality).unwrap();
     let deserialized: Quality = serde_json::from_str(&json).unwrap();
     assert_eq!(deserialized.lossy, 90);
@@ -118,7 +130,10 @@ fn test_config_save_and_load_roundtrip() {
 
     let config = OptimizerConfig {
         mode: CompressionMode::Lossless,
-        quality: Quality { lossy: 90, lossless: 95 },
+        quality: Quality {
+            lossy: 90,
+            lossless: 95,
+        },
         max_width: Some(1920),
         max_height: Some(1080),
         format: OutputFormat::WebP,
@@ -186,7 +201,8 @@ fn test_load_empty_config() {
 /// Test that load_from_file returns error for non-existent file
 #[test]
 fn test_load_nonexistent_file() {
-    let result = OptimizerConfig::load_from_file(PathBuf::from("/nonexistent/path/config.json").as_path());
+    let result =
+        OptimizerConfig::load_from_file(PathBuf::from("/nonexistent/path/config.json").as_path());
     assert!(result.is_err());
 }
 

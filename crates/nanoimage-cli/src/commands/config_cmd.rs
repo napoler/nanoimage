@@ -1,6 +1,6 @@
 //! CLI 子命令 - config
-use crate::commands::common::{load_config, save_config, config_path};
-use crate::commands::output::{success, info, error};
+use crate::commands::common::{config_path, load_config, save_config};
+use crate::commands::output::{error, info, success};
 use anyhow::Result;
 use nanoimage_core::OptimizerConfig;
 

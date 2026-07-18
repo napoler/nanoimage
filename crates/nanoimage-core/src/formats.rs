@@ -1,7 +1,7 @@
 //! 格式检测与转换
-use std::path::{Path, PathBuf};
-use image::GenericImageView;
 use crate::ImageFormat;
+use image::GenericImageView;
+use std::path::{Path, PathBuf};
 
 /// 图像信息
 #[derive(Debug, Clone)]
@@ -87,7 +87,10 @@ impl ImageInfo {
         };
 
         // 提取连续的数字字符（可能带小数点）
-        let num_str: String = value_start.chars().take_while(|c| c.is_ascii_digit() || *c == '.').collect();
+        let num_str: String = value_start
+            .chars()
+            .take_while(|c| c.is_ascii_digit() || *c == '.')
+            .collect();
         num_str.parse::<u32>().ok()
     }
 

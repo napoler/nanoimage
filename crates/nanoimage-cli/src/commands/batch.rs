@@ -1,6 +1,6 @@
 //! CLI 子命令 - batch
 use crate::commands::common::load_config;
-use crate::commands::output::{success, error, dot, file_error, print_table};
+use crate::commands::output::{dot, error, file_error, print_table, success};
 use anyhow::Result;
 use nanoimage_core::{format_size, BatchProcessor, OutputFormat};
 use std::path::PathBuf;
@@ -127,7 +127,11 @@ fn truncate_str(s: &str, max_width: usize) -> String {
 fn display_char_width(c: char) -> usize {
     // CJK Unified Ideographs start at U+4E00; treat code points above that
     // (and excluding the half-width katakana-middle dot U+3030) as double-width.
-    if c as u32 > 0x4E00 && c as u32 != 0x3030 { 2 } else { 1 }
+    if c as u32 > 0x4E00 && c as u32 != 0x3030 {
+        2
+    } else {
+        1
+    }
 }
 
 pub fn execute(args: Args) -> Result<()> {
@@ -176,22 +180,21 @@ pub fn execute(args: Args) -> Result<()> {
             let orig_size = std::fs::metadata(file)
                 .map(|m| format_size(m.len()))
                 .unwrap_or_else(|_| "0 B".to_string());
-            rows.push(vec![name, orig_size, target_fmt.clone(), "待处理".to_string()]);
+            rows.push(vec![
+                name,
+                orig_size,
+                target_fmt.clone(),
+                "待处理".to_string(),
+            ]);
         }
 
-        print_table(
-            &["文件名", "原始大小", "目标格式", "状态"],
-            rows,
-        );
+        print_table(&["文件名", "原始大小", "目标格式", "状态"], rows);
         return Ok(());
     }
 
     success(&format!("⚡ 开始处理 ({} 线程)...", args.workers));
-    let (results, _failed_count) = processor.process_sync_with_options(
-        &files,
-        args.skip_failed,
-        args.only_unoptimized,
-    );
+    let (results, _failed_count) =
+        processor.process_sync_with_options(&files, args.skip_failed, args.only_unoptimized);
 
     let mut success_count = 0;
     let mut total_original: u64 = 0;

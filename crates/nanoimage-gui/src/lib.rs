@@ -1,16 +1,21 @@
 //! NanoImage GUI 应用
-mod ui;
 mod config_persistence;
+mod ui;
 
 use eframe::egui;
-use nanoimage_core::{format_size, BatchProcessor, FileStatus, OptimizerConfig, ProcessResult, Progress};
+use nanoimage_core::{
+    format_size, BatchProcessor, FileStatus, OptimizerConfig, ProcessResult, Progress,
+};
 use std::path::PathBuf;
-use std::sync::mpsc::{self, Receiver};
 use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::mpsc::{self, Receiver};
 use std::thread;
 use std::thread::JoinHandle;
 
-use ui::{file_panel::FilePanel, log_view::LogPanel, progress::ProgressPanel, settings_panel::SettingsPanel};
+use ui::{
+    file_panel::FilePanel, log_view::LogPanel, progress::ProgressPanel,
+    settings_panel::SettingsPanel,
+};
 
 /// 消息类型：后台线程向UI线程发送的消息
 enum WorkerMsg {
@@ -79,13 +84,20 @@ impl NanoImageApp {
 
     /// 添加文件
     fn add_files(&mut self, paths: Vec<PathBuf>) {
-        let image_paths: Vec<PathBuf> = paths.into_iter().filter(|p| {
-            let ext = p.extension()
-                .and_then(|e| e.to_str())
-                .map(|s| s.to_lowercase())
-                .unwrap_or_default();
-            matches!(ext.as_str(), "jpg" | "jpeg" | "png" | "webp" | "gif" | "bmp" | "svg")
-        }).collect();
+        let image_paths: Vec<PathBuf> = paths
+            .into_iter()
+            .filter(|p| {
+                let ext = p
+                    .extension()
+                    .and_then(|e| e.to_str())
+                    .map(|s| s.to_lowercase())
+                    .unwrap_or_default();
+                matches!(
+                    ext.as_str(),
+                    "jpg" | "jpeg" | "png" | "webp" | "gif" | "bmp" | "svg"
+                )
+            })
+            .collect();
 
         if !image_paths.is_empty() {
             self.file_panel.add_files(image_paths);
@@ -163,7 +175,7 @@ impl NanoImageApp {
         // 使用 Option::take 来获取 channel，避免借用冲突
         if let Some(rx) = self.worker_rx.take() {
             let mut should_clear = false;
-            
+
             while let Ok(msg) = rx.try_recv() {
                 match msg {
                     WorkerMsg::Progress(progress) => {
@@ -176,14 +188,18 @@ impl NanoImageApp {
                         if idx < self.file_panel.files.len() {
                             // 获取 path 的克隆
                             let path = self.file_panel.files[idx].path.clone();
-                            self.file_panel.update_status(&path, nanoimage_core::FileStatus::Processing, None);
+                            self.file_panel.update_status(
+                                &path,
+                                nanoimage_core::FileStatus::Processing,
+                                None,
+                            );
                         }
                     }
                     WorkerMsg::Completed(results) => {
                         let mut total_saved: u64 = 0;
                         let mut success_count = 0;
                         let mut failed_count = 0;
-                        
+
                         for result in results {
                             if result.success {
                                 total_saved += result.savings.max(0) as u64;
@@ -203,14 +219,11 @@ impl NanoImageApp {
                                         result.error.unwrap_or_else(|| "Unknown error".to_string()),
                                     )
                                 };
-                                self.file_panel.update_status(
-                                    &result.original_path,
-                                    status,
-                                    None,
-                                );
+                                self.file_panel
+                                    .update_status(&result.original_path, status, None);
                             }
                         }
-                        
+
                         // 处理完成通知
                         if success_count > 0 {
                             self.log_panel.success(format!(
@@ -220,9 +233,10 @@ impl NanoImageApp {
                             ));
                         }
                         if failed_count > 0 {
-                            self.log_panel.error(format!("处理完成，但有 {} 个文件失败", failed_count));
+                            self.log_panel
+                                .error(format!("处理完成，但有 {} 个文件失败", failed_count));
                         }
-                        
+
                         self.show_completion_dialog = true;
                         self.total_saved_bytes = total_saved;
                         self.processing = false;
@@ -238,7 +252,7 @@ impl NanoImageApp {
                     }
                 }
             }
-            
+
             if should_clear {
                 self.worker_rx = None;
             } else {
@@ -254,22 +268,30 @@ impl eframe::App for NanoImageApp {
         // 键盘快捷键
         ctx.input_mut(|i| {
             // Ctrl+Enter: 开始/停止处理
-            if i.consume_shortcut(&egui::KeyboardShortcut::new(egui::Modifiers::CTRL, egui::Key::Enter))
-                && !self.processing && !self.file_panel.is_empty()
+            if i.consume_shortcut(&egui::KeyboardShortcut::new(
+                egui::Modifiers::CTRL,
+                egui::Key::Enter,
+            )) && !self.processing
+                && !self.file_panel.is_empty()
             {
                 self.process_files();
             }
 
             // Ctrl+O: 添加文件
-            if i.consume_shortcut(&egui::KeyboardShortcut::new(egui::Modifiers::CTRL, egui::Key::O)) {
+            if i.consume_shortcut(&egui::KeyboardShortcut::new(
+                egui::Modifiers::CTRL,
+                egui::Key::O,
+            )) {
                 if let Some(paths) = rfd::FileDialog::new().pick_files() {
                     self.add_files(paths);
                 }
             }
 
             // Escape: 取消处理
-            if i.consume_shortcut(&egui::KeyboardShortcut::new(egui::Modifiers::NONE, egui::Key::Escape))
-                && self.processing
+            if i.consume_shortcut(&egui::KeyboardShortcut::new(
+                egui::Modifiers::NONE,
+                egui::Key::Escape,
+            )) && self.processing
             {
                 self.cancel_processing();
             }
@@ -281,16 +303,17 @@ impl eframe::App for NanoImageApp {
         // 处理拖放
         let dropped_files = ctx.input(|i| i.raw.dropped_files.clone());
         if !dropped_files.is_empty() {
-            let paths: Vec<PathBuf> = dropped_files.into_iter()
-                .filter_map(|f| f.path)
-                .collect();
+            let paths: Vec<PathBuf> = dropped_files.into_iter().filter_map(|f| f.path).collect();
             self.add_files(paths);
         }
 
         // 处理完成弹窗
         if self.show_completion_dialog {
             let total_saved = self.total_saved_bytes;
-            let success_count = self.file_panel.files.iter()
+            let success_count = self
+                .file_panel
+                .files
+                .iter()
                 .filter(|f| f.status == FileStatus::Completed)
                 .count();
             let total = self.file_panel.files.len();
@@ -340,10 +363,17 @@ impl eframe::App for NanoImageApp {
 
             // 按钮行
             ui.horizontal(|ui| {
-                let button_text = if self.processing { "处理中... [Esc]" } else { "▶ 开始优化 [Ctrl+Enter]" };
+                let button_text = if self.processing {
+                    "处理中... [Esc]"
+                } else {
+                    "▶ 开始优化 [Ctrl+Enter]"
+                };
                 let can_start = !self.processing && !self.file_panel.is_empty();
 
-                if ui.add_enabled(can_start, egui::Button::new(button_text)).clicked() {
+                if ui
+                    .add_enabled(can_start, egui::Button::new(button_text))
+                    .clicked()
+                {
                     self.process_files();
                 }
 
@@ -363,8 +393,10 @@ impl eframe::App for NanoImageApp {
 
             // 进度条
             if self.processing {
-                ui.add(egui::ProgressBar::new(self.progress / 100.0)
-                    .text(format!("{:.*}% - {}", 1, self.progress, self.current_file)));
+                ui.add(
+                    egui::ProgressBar::new(self.progress / 100.0)
+                        .text(format!("{:.*}% - {}", 1, self.progress, self.current_file)),
+                );
             }
 
             ui.separator();

@@ -1,5 +1,5 @@
 //! Tests for formats module
-use nanoimage_core::formats::{format_size, format_name, ImageInfo};
+use nanoimage_core::formats::{format_name, format_size, ImageInfo};
 use nanoimage_core::ImageFormat;
 
 /// Test format_size for bytes

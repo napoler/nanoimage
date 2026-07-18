@@ -1,6 +1,6 @@
 //! Tests for processor module
-use std::path::Path;
 use nanoimage_core::{BatchProcessor, Progress};
+use std::path::Path;
 
 /// Test that collect_images finds image files in a directory
 #[test]
@@ -59,7 +59,8 @@ fn test_collect_images_empty_dir() {
 /// Test that collect_images handles non-existent directory gracefully
 #[test]
 fn test_collect_images_nonexistent_dir() {
-    let files = BatchProcessor::collect_images(Path::new("/nonexistent/path/that/does/not/exist"), false);
+    let files =
+        BatchProcessor::collect_images(Path::new("/nonexistent/path/that/does/not/exist"), false);
     assert!(files.is_empty());
 }
 
@@ -217,7 +218,10 @@ fn test_batch_process_sync_with_results() {
 #[test]
 fn test_batch_processor_with_config() {
     let config = nanoimage_core::OptimizerConfig {
-        quality: nanoimage_core::Quality { lossy: 90, lossless: 95 },
+        quality: nanoimage_core::Quality {
+            lossy: 90,
+            lossless: 95,
+        },
         overwrite: true,
         workers: 4,
         ..Default::default()
@@ -234,5 +238,8 @@ fn test_batch_processor_with_config() {
     create_test_image(&path);
     let results = processor.process_sync(std::slice::from_ref(&path));
     assert_eq!(results.len(), 1);
-    assert!(results[0].success, "with_config 创建的处理器应该能正常处理文件");
+    assert!(
+        results[0].success,
+        "with_config 创建的处理器应该能正常处理文件"
+    );
 }

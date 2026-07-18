@@ -31,7 +31,11 @@ fn test_e2e_jpeg_compress() {
     let result = optimizer.process_file(&input);
 
     assert!(result.success, "JPEG 压缩应该成功");
-    assert!(expected_output.exists(), "输出文件应该存在: {:?}", result.output_path);
+    assert!(
+        expected_output.exists(),
+        "输出文件应该存在: {:?}",
+        result.output_path
+    );
     assert!(result.new_size > 0, "输出大小应该大于 0");
     // 验证输出路径
     assert_eq!(result.output_path, expected_output);
@@ -90,7 +94,11 @@ fn test_e2e_webp_convert() {
     let result = optimizer.process_file(&input);
 
     assert!(result.success, "WebP 转换应该成功");
-    assert!(expected_output.exists(), "WebP 输出文件应该存在: {:?}", result.output_path);
+    assert!(
+        expected_output.exists(),
+        "WebP 输出文件应该存在: {:?}",
+        result.output_path
+    );
     assert!(result.new_size > 0, "WebP 输出大小应该大于 0");
 }
 
@@ -133,9 +141,8 @@ fn test_e2e_skip_failed() {
 
     // 创建有效的 JPEG
     let valid = temp_dir.path().join("valid.jpg");
-    let rgb = image::ImageBuffer::<image::Rgb<u8>, _>::from_fn(50, 50, |_, _| {
-        image::Rgb([255u8, 0, 0])
-    });
+    let rgb =
+        image::ImageBuffer::<image::Rgb<u8>, _>::from_fn(50, 50, |_, _| image::Rgb([255u8, 0, 0]));
     rgb.save(&valid).unwrap();
 
     // 创建无效的"图片"
@@ -210,7 +217,10 @@ fn test_e2e_format_size() {
 fn test_e2e_config_roundtrip() {
     let config = nanoimage_core::OptimizerConfig {
         mode: nanoimage_core::CompressionMode::Lossless,
-        quality: nanoimage_core::Quality { lossy: 90, lossless: 95 },
+        quality: nanoimage_core::Quality {
+            lossy: 90,
+            lossless: 95,
+        },
         max_width: Some(1920),
         max_height: Some(1080),
         format: nanoimage_core::OutputFormat::WebP,

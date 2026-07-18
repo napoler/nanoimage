@@ -1,9 +1,9 @@
 //! CLI 子命令 - convert
 use crate::commands::common::load_config;
-use crate::commands::output::{success, error};
+use crate::commands::output::{error, success};
 use anyhow::Result;
-use std::path::PathBuf;
 use nanoimage_core::{Optimizer, OutputFormat};
+use std::path::PathBuf;
 
 #[derive(clap::Parser)]
 pub struct Args {
@@ -68,7 +68,11 @@ pub fn execute(args: Args) -> Result<()> {
                     .map_err(|e| anyhow::anyhow!("清理临时文件失败: {}", e))?;
             }
         }
-        success(&format!("✓ 转换完成: {} → {}", args.input.display(), args.output.display()));
+        success(&format!(
+            "✓ 转换完成: {} → {}",
+            args.input.display(),
+            args.output.display()
+        ));
     } else {
         error(&format!("✗ 转换失败: {}", result.error.unwrap_or_default()));
     }

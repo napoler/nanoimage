@@ -1,6 +1,6 @@
 //! 设置面板 - 配置 UI 组件
 use eframe::egui;
-use nanoimage_core::{OptimizerConfig, OutputFormat, CompressionMode};
+use nanoimage_core::{CompressionMode, OptimizerConfig, OutputFormat};
 use std::path::Path;
 
 /// 设置面板组件
@@ -127,7 +127,9 @@ impl SettingsPanel {
             // 输出目录选择
             ui.horizontal(|ui| {
                 ui.label("输出目录:");
-                let dir_text = self.config.output_dir
+                let dir_text = self
+                    .config
+                    .output_dir
                     .as_ref()
                     .map(|p| p.to_string_lossy().to_string())
                     .unwrap_or_else(|| "默认 (同目录)".to_string());
@@ -187,7 +189,8 @@ impl SettingsPanel {
 
     /// 保存配置到指定路径
     fn save_config_to_path(&self, path: &Path) -> Result<(), String> {
-        self.config.save_to_file(path)
+        self.config
+            .save_to_file(path)
             .map_err(|e| format!("保存配置失败: {}", e))
     }
 
