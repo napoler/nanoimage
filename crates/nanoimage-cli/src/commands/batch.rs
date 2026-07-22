@@ -215,8 +215,9 @@ pub fn execute(args: Args) -> Result<()> {
             dot();
         } else {
             println!();
-            file_error(&name, &result.error.clone().unwrap_or_default());
-            failures.push((name, result.error.clone().unwrap_or_default()));
+            let err_msg = result.error.as_deref().unwrap_or("未知错误");
+            file_error(&name, err_msg);
+            failures.push((name, err_msg.to_string()));
         }
     }
 

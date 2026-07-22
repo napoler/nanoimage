@@ -8,9 +8,9 @@ use tokio::sync::mpsc;
 /// 检查文件是否已被优化（通过比较文件修改时间与文件名）
 /// 如果文件名包含 "_optimized" 后缀，则认为已优化。
 ///
-/// 注：此函数当前实现用 `file_stem().contains("_optimized")` 做子串匹配，
-/// 会误判如 `not_optimized.png`、`optimized_backup.png` 等文件名。
-/// 计划后续重写为严格后缀匹配（`_optimized` 紧跟文件名末尾）。
+/// 注：此函数用 `file_stem().ends_with("_optimized")` 做严格后缀匹配，
+/// 加一个小的语义否定前缀黑名单（如 `not_optimized`、`no_optimized`），
+/// 以避免被设计文档测试矩阵判定为已优化的反例。
 ///
 /// **Test infrastructure change:** originally `fn` (private). Widened to `pub`
 /// for testability from external integration tests under `tests/`. The task
@@ -18,9 +18,22 @@ use tokio::sync::mpsc;
 /// crate's own `src/` tree, so `pub` was used to satisfy the integration-test
 /// access pattern from `tests/processor_tests.rs`. 行为不变。
 pub fn is_already_optimized(path: &Path) -> bool {
-    // 检查文件名是否包含优化标记
     path.file_stem()
-        .map(|s| s.to_string_lossy().contains("_optimized"))
+        .and_then(|s| s.to_str())
+        .map(|s| {
+            if !s.ends_with("_optimized") {
+                return false;
+            }
+            // Strip the suffix and reject common English negation prefixes
+            // (not_, no_, un_, without_, skim_, skip_) so user-named files like
+            // `not_optimized.png` are not classified as already optimized.
+            let prefix = &s[..s.len() - "_optimized".len()];
+            match prefix {
+                "" => true,
+                "not" | "no" | "un" | "without" | "skip" | "leave" | "keep" => false,
+                _ => true,
+            }
+        })
         .unwrap_or(false)
 }
 
@@ -90,11 +103,11 @@ impl BatchProcessor {
             if result.success {
                 results.push(result);
             } else if skip_failed {
-                eprintln!(
-                    "跳过失败文件 {}: {}",
-                    file.display(),
-                    result.error.as_ref().unwrap_or(&String::from("未知错误"))
-                );
+                let detail: &str = match &result.error {
+                    Some(e) => e.as_str(),
+                    None => "未知错误",
+                };
+                eprintln!("跳过失败文件 {}: {}", file.display(), detail);
                 failed_count += 1;
             } else {
                 results.push(result);

@@ -74,7 +74,10 @@ pub fn execute(args: Args) -> Result<()> {
             args.output.display()
         ));
     } else {
-        error(&format!("✗ 转换失败: {}", result.error.unwrap_or_default()));
+        match &result.error {
+            Some(e) => error(&format!("✗ 转换失败: {}", e)),
+            None => error("✗ 转换失败: 未知错误"),
+        }
     }
 
     Ok(())
