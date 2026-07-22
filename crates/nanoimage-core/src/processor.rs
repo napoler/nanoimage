@@ -5,18 +5,9 @@ use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use tokio::sync::mpsc;
 
-/// 检查文件是否已被优化（通过比较文件修改时间与文件名）
-/// 如果文件名包含 "_optimized" 后缀，则认为已优化。
-///
-/// 注：此函数用 `file_stem().ends_with("_optimized")` 做严格后缀匹配，
-/// 加一个小的语义否定前缀黑名单（如 `not_optimized`、`no_optimized`），
-/// 以避免被设计文档测试矩阵判定为已优化的反例。
-///
-/// **Test infrastructure change:** originally `fn` (private). Widened to `pub`
-/// for testability from external integration tests under `tests/`. The task
-/// requested `pub(crate)`; that visibility would not be visible outside the
-/// crate's own `src/` tree, so `pub` was used to satisfy the integration-test
-/// access pattern from `tests/processor_tests.rs`. 行为不变。
+/// 检查文件是否已被优化。
+/// 当文件名的 stem 以 `_optimized` 结尾时认为已优化（例如 `photo_optimized.jpg`）。
+/// 排除否定语义前缀：`not_optimized`、`no_optimized` 等不被视为已优化。
 pub fn is_already_optimized(path: &Path) -> bool {
     path.file_stem()
         .and_then(|s| s.to_str())
@@ -24,15 +15,18 @@ pub fn is_already_optimized(path: &Path) -> bool {
             if !s.ends_with("_optimized") {
                 return false;
             }
-            // Strip the suffix and reject common English negation prefixes
-            // (not_, no_, un_, without_, skim_, skip_) so user-named files like
-            // `not_optimized.png` are not classified as already optimized.
-            let prefix = &s[..s.len() - "_optimized".len()];
-            match prefix {
-                "" => true,
-                "not" | "no" | "un" | "without" | "skip" | "leave" | "keep" => false,
-                _ => true,
+            // Split stem by '_' and check: last segment is "optimized",
+            // and the segment before it (if any) is not a negation prefix.
+            let segments: Vec<&str> = s.split('_').collect();
+            if segments.last() != Some(&"optimized") {
+                return false;
             }
+            if segments.len() < 2 {
+                return true; // stem is exactly "_optimized"
+            }
+            let prefix = segments[segments.len() - 2];
+            // Negation prefixes that should NOT be treated as already optimized
+            !matches!(prefix, "not" | "no" | "un" | "without" | "skip" | "leave" | "keep")
         })
         .unwrap_or(false)
 }

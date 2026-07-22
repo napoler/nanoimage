@@ -274,6 +274,22 @@ fn test_is_already_optimized_suffix_true() {
     );
 }
 
+/// 测试 `is_already_optimized` 在 stem 仅为 `"_optimized"` 时也判定为已优化。
+#[test]
+fn test_is_already_optimized_bare_suffix_true() {
+    let result =
+        nanoimage_core::processor::is_already_optimized(std::path::Path::new("_optimized.png"));
+    assert!(result, "_optimized.png 应判定为已优化");
+}
+
+/// 测试 `is_already_optimized` 不应匹配不含 `_optimized` 后缀的常见前缀场景。
+#[test]
+fn test_is_already_optimized_no_suffix_false() {
+    let result =
+        nanoimage_core::processor::is_already_optimized(std::path::Path::new("optimized.png"));
+    assert!(!result, "optimized.png 不含下划线 _optimized 前缀，应判定为未优化");
+}
+
 /// 测试 `BatchProcessor::collect_images` 包含 BMP 文件。
 ///
 /// 当前实现已包含 BMP 扩展（`extensions = ["jpg", "jpeg", "png", "webp", "gif", "bmp", "svg"]`），

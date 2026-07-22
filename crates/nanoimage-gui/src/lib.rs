@@ -215,9 +215,10 @@ impl NanoImageApp {
                                 let status = if self.config.skip_failed {
                                     FileStatus::Skipped
                                 } else {
-                                    FileStatus::Error(
-                                        result.error.unwrap_or_else(|| "Unknown error".to_string()),
-                                    )
+                                    match result.error {
+                                        Some(msg) => FileStatus::Error(msg),
+                                        None => FileStatus::Error("Unknown error".to_string()),
+                                    }
                                 };
                                 self.file_panel
                                     .update_status(&result.original_path, status, None);
