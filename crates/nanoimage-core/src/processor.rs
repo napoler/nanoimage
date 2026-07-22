@@ -211,7 +211,13 @@ impl BatchProcessor {
                     bytes_processed: result.original_size,
                     bytes_saved: result.savings.max(0) as u64,
                 };
-                let _ = progress_tx.send(progress).await;
+                if let Err(e) = progress_tx.send(progress).await {
+                    tracing::warn!(
+                        target: "nanoimage_core",
+                        event = "progress_channel_send_discarded",
+                        error = %e
+                    );
+                }
                 drop(permit);
                 result
             });

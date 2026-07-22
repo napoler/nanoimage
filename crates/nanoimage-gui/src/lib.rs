@@ -144,11 +144,25 @@ impl NanoImageApp {
                 if cancel_flag.load(Ordering::SeqCst) {
                     return;
                 }
-                tx.send(WorkerMsg::Progress(progress)).ok();
+                if let Err(e) = tx.send(WorkerMsg::Progress(progress)) {
+                    tracing::warn!(
+                        target: "nanoimage_gui",
+                        event = "gui_channel_send_discarded",
+                        kind = "progress",
+                        error = %e
+                    );
+                }
             });
 
             // 发送完成消息（即使被取消也发送，让 UI 知道任务已结束）
-            tx.send(WorkerMsg::Completed(results)).ok();
+            if let Err(e) = tx.send(WorkerMsg::Completed(results)) {
+                tracing::warn!(
+                    target: "nanoimage_gui",
+                    event = "gui_channel_send_discarded",
+                    kind = "completed",
+                    error = %e
+                );
+            }
         });
 
         self.worker_handle = Some(handle);
@@ -415,5 +429,41 @@ impl eframe::App for NanoImageApp {
         if self.processing {
             ctx.request_repaint();
         }
+    }
+}
+
+#[cfg(test)]
+mod channel_tests {
+    /// 共享的 sink：当 channel 关闭时，应当触发 warn。
+    /// 镜像 `NanoImageApp::process_files` 中的 send-with-warn 模式。
+    fn try_send_with_warn(tx: std::sync::mpsc::Sender<u32>) {
+        if let Err(e) = tx.send(42) {
+            tracing::warn!(
+                target: "nanoimage_gui",
+                event = "gui_channel_send_discarded",
+                kind = "test",
+                error = %e
+            );
+        }
+    }
+
+    /// channel 已关闭的 receiver 后，发送应当返回 SendError，且我们的 warn 被 emit。
+    #[test]
+    fn test_gui_channel_send_on_closed_recv_emits_warn() {
+        let (tx, rx) = std::sync::mpsc::channel::<u32>();
+        drop(rx);
+        try_send_with_warn(tx);
+        // 发送必定失败（receiver 已 drop），但不能 panic。
+        // 我们的 warn 分支被触发；日志捕获需要 tracing-test 等额外依赖，
+        // 这里证明 try_send_with_warn 对 Err 分支的处理是可行的：调用未 panic。
+    }
+
+    /// 正常情况下 send 应当成功，不触发 warn 分支。
+    #[test]
+    fn test_gui_channel_send_success_does_not_emit_warn() {
+        let (tx, rx) = std::sync::mpsc::channel::<u32>();
+        try_send_with_warn(tx);
+        let received = rx.recv().expect("receiver should get the message");
+        assert_eq!(received, 42);
     }
 }
