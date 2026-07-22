@@ -44,6 +44,9 @@ test_output/
 # Rust
 Cargo.lock
 
+# Local worktrees
+.worktrees/
+
 # Secrets
 .env
 .env.*
