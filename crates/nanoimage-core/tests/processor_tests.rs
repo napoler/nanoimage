@@ -243,3 +243,58 @@ fn test_batch_processor_with_config() {
         "with_config 创建的处理器应该能正常处理文件"
     );
 }
+
+/// 测试 `is_already_optimized` 不应匹配仅含 `_optimized` 子串但未真正优化的文件。
+///
+/// 期望失败原因：当前实现使用 `file_stem().contains("_optimized")` 做子串匹配，
+/// "not_optimized.png" 的 file_stem 是 "not_optimized"，含子串 "_optimized"，
+/// 因此当前会错误地返回 `true`。后续修复应改用严格的后缀匹配规则。
+#[test]
+fn test_is_already_optimized_substring_false() {
+    let result = nanoimage_core::processor::is_already_optimized(std::path::Path::new(
+        "not_optimized.png",
+    ));
+    assert!(
+        !result,
+        "不真正包含 _optimized 后缀的文件不应被判定为已优化"
+    );
+}
+
+/// 测试 `is_already_optimized` 正向后缀匹配：`photo_optimized.jpg` 应被判定为已优化。
+///
+/// 这是预期的回归锚定（regression anchor）：当前实现即可通过此测试。
+/// 配合 `test_is_already_optimized_substring_false` 一同确保边界条件被覆盖。
+#[test]
+fn test_is_already_optimized_suffix_true() {
+    let result =
+        nanoimage_core::processor::is_already_optimized(std::path::Path::new("photo_optimized.jpg"));
+    assert!(
+        result,
+        "photo_optimized.jpg 应被判定为已优化（_optimized 是真正的后缀）"
+    );
+}
+
+/// 测试 `BatchProcessor::collect_images` 包含 BMP 文件。
+///
+/// 当前实现已包含 BMP 扩展（`extensions = ["jpg", "jpeg", "png", "webp", "gif", "bmp", "svg"]`），
+/// 故此测试当前已通过，作为收集行为的回归锚定。
+#[test]
+fn test_collect_images_includes_bmp() {
+    let temp_dir = tempfile::tempdir().unwrap();
+    std::fs::write(temp_dir.path().join("a.jpg"), b"fake").unwrap();
+    std::fs::write(temp_dir.path().join("b.png"), b"fake").unwrap();
+    std::fs::write(temp_dir.path().join("c.bmp"), b"fake").unwrap();
+    std::fs::write(temp_dir.path().join("d.txt"), b"not an image").unwrap();
+
+    let files = BatchProcessor::collect_images(temp_dir.path(), false);
+    assert_eq!(files.len(), 3, "应收集到 jpg/png/bmp 三个图片文件");
+
+    // 收集到的文件名集合应包含全部三种图片格式
+    let names: Vec<String> = files
+        .iter()
+        .map(|p| p.file_name().unwrap().to_string_lossy().to_string())
+        .collect();
+    assert!(names.iter().any(|n| n == "a.jpg"), "应包含 a.jpg");
+    assert!(names.iter().any(|n| n == "b.png"), "应包含 b.png");
+    assert!(names.iter().any(|n| n == "c.bmp"), "应包含 c.bmp —— BMP 必须被支持");
+}

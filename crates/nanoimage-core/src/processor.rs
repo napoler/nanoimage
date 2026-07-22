@@ -7,7 +7,17 @@ use tokio::sync::mpsc;
 
 /// 检查文件是否已被优化（通过比较文件修改时间与文件名）
 /// 如果文件名包含 "_optimized" 后缀，则认为已优化。
-fn is_already_optimized(path: &Path) -> bool {
+///
+/// 注：此函数当前实现用 `file_stem().contains("_optimized")` 做子串匹配，
+/// 会误判如 `not_optimized.png`、`optimized_backup.png` 等文件名。
+/// 计划后续重写为严格后缀匹配（`_optimized` 紧跟文件名末尾）。
+///
+/// **Test infrastructure change:** originally `fn` (private). Widened to `pub`
+/// for testability from external integration tests under `tests/`. The task
+/// requested `pub(crate)`; that visibility would not be visible outside the
+/// crate's own `src/` tree, so `pub` was used to satisfy the integration-test
+/// access pattern from `tests/processor_tests.rs`. 行为不变。
+pub fn is_already_optimized(path: &Path) -> bool {
     // 检查文件名是否包含优化标记
     path.file_stem()
         .map(|s| s.to_string_lossy().contains("_optimized"))
