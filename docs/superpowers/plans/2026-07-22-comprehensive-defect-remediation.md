@@ -22,46 +22,46 @@ base-ref: da63d9d6059b84f28d8064b72fdeee455ce36285
 
 ### 1. 先写失败测试（TDD Red）→ 委派 code-assistant
 
-- [ ] **1.1** `crates/nanoimage-core/tests/optimizer_tests.rs` 加失败测试：BMP 通过 `process_file` 在合法 fixture 上成功
+- [x] **1.1** `crates/nanoimage-core/tests/optimizer_tests.rs` 加失败测试：BMP 通过 `process_file` 在合法 fixture 上成功
   - 失败原因：BMP 命中 `_ => Err("不支持的格式")` 分支
   - 验证：`cargo test -p nanoimage-core test_bmp_compress` 失败（非 success）
   - commit: `test(core): add failing test for BMP compression`
 
-- [ ] **1.2** `crates/nanoimage-core/tests/optimizer_tests.rs` 加失败测试：BMP 损坏文件 → `success=false`
+- [x] **1.2** `crates/nanoimage-core/tests/optimizer_tests.rs` 加失败测试：BMP 损坏文件 → `success=false`
   - 失败原因：BMP 路径不存在
   - 验证：`cargo test -p nanoimage-core test_bmp_corrupt_fails` 失败
   - commit: 同 1.1 可合并
 
-- [ ] **1.3** `crates/nanoimage-core/tests/processor_tests.rs` 加失败单元测试：`is_already_optimized("not_optimized.png") == false`
+- [x] **1.3** `crates/nanoimage-core/tests/processor_tests.rs` 加失败单元测试：`is_already_optimized("not_optimized.png") == false`
   - 失败原因：当前 `.contains("_optimized")` 误判为 true
   - 验证：`cargo test -p nanoimage-core test_is_already_optimized_substring_false` 失败
   - commit: `test(core): add failing test for is_already_optimized boundary`
 
-- [ ] **1.4** 同文件加 `photo_optimized.jpg` 后缀匹配测试
+- [x] **1.4** 同文件加 `photo_optimized.jpg` 后缀匹配测试
   - 验证：`cargo test -p nanoimage-core test_is_already_optimized_suffix_true` 通过（当前行为也对，但作为回归证据）
   - commit: 可与 1.3 合并
 
-- [ ] **1.5** `crates/nanoimage-core/tests/processor_tests.rs` 加 `BatchProcessor::collect_images` 回归测试确认 BMP 仍收集
+- [x] **1.5** `crates/nanoimage-core/tests/processor_tests.rs` 加 `BatchProcessor::collect_images` 回归测试确认 BMP 仍收集
   - 验证：`cargo test -p nanoimage-core test_collect_images_all_extensions` 已存在；扩 1 个专门 BMP 用例
   - commit: 同 1.3
 
 ### 2. 核心实现（TDD Green）→ 委派 code-assistant
 
-- [ ] **2.1** `crates/nanoimage-core/src/optimizer.rs` 实现 `Optimizer::process_bmp`
+- [x] **2.1** `crates/nanoimage-core/src/optimizer.rs` 实现 `Optimizer::process_bmp`
   - API：D1 节算法
   - 验证：1.1 测试转为 GREEN
   - 验证：`cargo test -p nanoimage-core test_bmp_compress` 通过
   - commit: `feat(core): implement BMP→PNG conversion in optimizer`
 
-- [ ] **2.2** `crates/nanoimage-core/src/optimizer.rs` 分发器新增 `ImageFormat::Bmp => self.process_bmp(...)`
+- [x] **2.2** `crates/nanoimage-core/src/optimizer.rs` 分发器新增 `ImageFormat::Bmp => self.process_bmp(...)`
   - 验证：1.2 测试转为 GREEN
   - commit: `feat(core): wire BMP arm into optimizer dispatcher`
 
-- [ ] **2.3** `crates/nanoimage-core/src/processor.rs` `is_already_optimized` 改为边界锚定
+- [x] **2.3** `crates/nanoimage-core/src/processor.rs` `is_already_optimized` 改为边界锚定
   - 验证：1.3 测试转为 GREEN；1.4、1.5 仍通过
   - commit: `fix(core): anchor is_already_optimized to suffix match`
 
-- [ ] **2.4** 替换 5 处 CLI/GUI 站点 `result.error.unwrap_or_default()` 为显式 `if let Some(e) = &result.error`
+- [x] **2.4** 替换 5 处 CLI/GUI 站点 `result.error.unwrap_or_default()` 为显式 `if let Some(e) = &result.error`
   - 站点：
     - `crates/nanoimage-cli/src/commands/batch.rs:218,219`（两次）
     - `crates/nanoimage-cli/src/commands/convert.rs:77`
@@ -70,48 +70,48 @@ base-ref: da63d9d6059b84f28d8064b72fdeee455ce36285
   - 验证：`cargo clippy --workspace --all-targets -- -D warnings` 通过；现有测试不受影响
   - commit: `refactor: replace unwrap_or_default on ProcessResult.error with explicit match`
 
-- [ ] **2.5** `crates/nanoimage-core/src/processor.rs:86` 替换 `result.error.as_ref().unwrap_or(...)` 为显式 match
+- [x] **2.5** `crates/nanoimage-core/src/processor.rs:86` 替换 `result.error.as_ref().unwrap_or(...)` 为显式 match
   - commit: 与 2.4 同组可合并
 
 ### 3. GUI 信道可观测性 → 委派 code-assistant
 
-- [ ] **3.1** `crates/nanoimage-gui/src/lib.rs` 替换 `tx.send(...).ok()` 为 `if let Err(e) = ... { tracing::warn!(...) }`
+- [x] **3.1** `crates/nanoimage-gui/src/lib.rs` 替换 `tx.send(...).ok()` 为 `if let Err(e) = ... { tracing::warn!(...) }`
   - 站点：line 147、151
   - 验证：`cargo build -p nanoimage-gui` 成功；现有测试通过
   - commit: `feat(gui): warn-log dropped GUI channel sends`
 
-- [ ] **3.2** `crates/nanoimage-gui/src/lib.rs` `#[cfg(test)] mod channel_tests` 新增「closed receiver → warn」测试
+- [x] **3.2** `crates/nanoimage-gui/src/lib.rs` `#[cfg(test)] mod channel_tests` 新增「closed receiver → warn」测试
   - 验证：`cargo test -p nanoimage-gui test_gui_channel_send_on_closed_recv` 通过
   - commit: `test(gui): cover dropped channel send warn`
 
 ### 4. 核心路径加固 + 错误注入测试 → 委派 code-assistant
 
-- [ ] **4.1** `test_optimizer_success_path_metadata`：默认模式 `output_path != input`，overwrite 模式 `== input`
+- [x] **4.1** `test_optimizer_success_path_metadata`：默认模式 `output_path != input`，overwrite 模式 `== input`
   - commit: `test(core): assert optimizer output path semantics`
 
-- [ ] **4.2** `test_processor_skip_failed_drops_failures`：混合 valid+invalid + `skip_failed=true`
+- [x] **4.2** `test_processor_skip_failed_drops_failures`：混合 valid+invalid + `skip_failed=true`
   - commit: 与 4.1 同组
 
-- [ ] **4.3** `test_processor_partial_failure_aggregation`：检查 `failed_count` 准确
+- [x] **4.3** `test_processor_partial_failure_aggregation`：检查 `failed_count` 准确
   - commit: `test(core): assert processor failure aggregation`
 
-- [ ] **4.4** `test_optimizer_unwritable_output_path`：`output_dir=/dev/null/foo/bar` → 期望 `success=false` 带父目录错误
+- [x] **4.4** `test_optimizer_unwritable_output_path`：`output_dir=/dev/null/foo/bar` → 期望 `success=false` 带父目录错误
   - commit: 与 4.1 同组
 
-- [ ] **4.5** `test_config_persistence_home_unset`：临时 `HOME=""`，断言 warn event + 路径退化为 `/.config/nanoimage`
+- [x] **4.5** `test_config_persistence_home_unset`：临时 `HOME=""`，断言 warn event + 路径退化为 `/.config/nanoimage`
   - commit: `test(gui): cover HOME-unset config persistence`
 
 ### 5. 仓库级验证（主进程）
 
-- [ ] **5.1** `cargo build --workspace --all-targets` exit 0
-- [ ] **5.2** `cargo clippy --workspace --all-targets -- -D warnings` exit 0
-- [ ] **5.3** `cargo test --workspace` 全部通过（目标 ≥ 90 测试）
-- [ ] **5.4** `git diff --stat` 仅含预设文件
+- [x] **5.1** `cargo build --workspace --all-targets` exit 0
+- [x] **5.2** `cargo clippy --workspace --all-targets -- -D warnings` exit 0
+- [x] **5.3** `cargo test --workspace` 全部通过（目标 ≥ 90 测试）
+- [x] **5.4** `git diff --stat` 仅含预设文件
 
 ### 6. 归档（主进程）
 
-- [ ] **6.1** `comet guard comprehensive-defect-remediation build --apply` PASS
-- [ ] **6.2** 通过 `comet state next` 交接给 `/comet-verify`
+- [x] **6.1** `comet guard comprehensive-defect-remediation build --apply` PASS
+- [x] **6.2** 通过 `comet state next` 交接给 `/comet-verify`
 
 ## 风险与兜底
 
