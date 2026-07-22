@@ -314,3 +314,113 @@ fn test_collect_images_includes_bmp() {
     assert!(names.iter().any(|n| n == "b.png"), "应包含 b.png");
     assert!(names.iter().any(|n| n == "c.bmp"), "应包含 c.bmp —— BMP 必须被支持");
 }
+
+/// 测试 `process_sync_with_options` 在 skip_failed=true 时，确实丢弃失败结果并准确累加 failed_count。
+#[test]
+fn test_processor_skip_failed_drops_failures() {
+    use nanoimage_core::Optimizer;
+    let temp_dir = tempfile::tempdir().unwrap();
+    let valid = temp_dir.path().join("valid.jpg");
+    create_test_image(&valid);
+    let invalid = temp_dir.path().join("invalid.jpg");
+    std::fs::write(&invalid, b"not a real image").unwrap();
+
+    let optimizer = Optimizer::with_default();
+    let processor = BatchProcessor::new(optimizer);
+
+    let (results, failed_count) =
+        processor.process_sync_with_options(&[valid.clone(), invalid.clone()], true, false);
+
+    assert_eq!(results.len(), 1, "skip_failed=true 应只保留 1 个成功结果");
+    assert_eq!(failed_count, 1, "failed_count 应为 1");
+    assert!(results[0].success);
+}
+
+/// 测试 `process_sync_with_options` 在 skip_failed=false 时，下发所有结果包括失败。
+#[test]
+fn test_processor_partial_failure_aggregation() {
+    use nanoimage_core::Optimizer;
+    let temp_dir = tempfile::tempdir().unwrap();
+    let valid = temp_dir.path().join("valid.jpg");
+    create_test_image(&valid);
+    let invalid1 = temp_dir.path().join("bad1.jpg");
+    let invalid2 = temp_dir.path().join("bad2.jpg");
+    std::fs::write(&invalid1, b"garbage").unwrap();
+    std::fs::write(&invalid2, b"more garbage").unwrap();
+
+    let optimizer = Optimizer::with_default();
+    let processor = BatchProcessor::new(optimizer);
+
+    let (results, failed_count) = processor.process_sync_with_options(
+        &[valid.clone(), invalid1.clone(), invalid2.clone()],
+        false,
+        false,
+    );
+
+    assert_eq!(results.len(), 3, "skip_failed=false 应下发全部 3 个结果");
+    assert_eq!(failed_count, 0, "失败计数不依赖 skip_failed，应为 0");
+    let success_count = results.iter().filter(|r| r.success).count();
+    assert_eq!(success_count, 1, "1 个有效 JPEG 应成功");
+    let error_count = results.iter().filter(|r| !r.success).count();
+    assert_eq!(error_count, 2, "2 个无效文件应失败");
+    for r in &results {
+        if !r.success {
+            assert!(r.error.is_some(), "失败结果必须有 error 字段");
+        }
+    }
+}
+
+/// 测试 Optimizer 默认模式 output_path != input_path，overwrite 模式 output_path == input_path。
+#[test]
+fn test_optimizer_success_path_metadata() {
+    use nanoimage_core::Optimizer;
+    let temp_dir = tempfile::tempdir().unwrap();
+    let input = temp_dir.path().join("photo.jpg");
+    create_test_image(&input);
+
+    // 默认模式
+    let default = Optimizer::with_default().process_file(&input);
+    assert!(default.success);
+    assert_ne!(
+        default.output_path, input,
+        "默认模式 output_path 应不同于 input"
+    );
+    assert!(default.new_size > 0);
+
+    // overwrite 模式
+    let overwrite_cfg = nanoimage_core::OptimizerConfig {
+        overwrite: true,
+        ..Default::default()
+    };
+    let overwrite_res = Optimizer::new(overwrite_cfg).process_file(&input);
+    assert!(overwrite_res.success);
+    assert_eq!(
+        overwrite_res.output_path, input,
+        "overwrite 模式 output_path 应等于 input"
+    );
+}
+
+/// 测试不可写 output_dir 时，process_file 返回 success=false。
+///
+/// 注：使用 `/dev/null/foo/bar` 作为 output_dir：/dev/null 是字符设备，
+/// create_dir_all 会失败（NOTDIR），符合错误注入需求。
+#[test]
+#[cfg(unix)]
+fn test_optimizer_unwritable_output_path() {
+    use nanoimage_core::{Optimizer, OptimizerConfig};
+    let temp_dir = tempfile::tempdir().unwrap();
+    let input = temp_dir.path().join("photo.jpg");
+    create_test_image(&input);
+
+    let cfg = OptimizerConfig {
+        output_dir: Some(std::path::PathBuf::from("/dev/null/foo/bar")),
+        ..Default::default()
+    };
+    let res = Optimizer::new(cfg).process_file(&input);
+    assert!(
+        !res.success,
+        "output_dir 不可写时 process_file 必须返回 success=false，实际: {:?}",
+        res.error
+    );
+    assert!(res.error.is_some(), "失败结果必须包含 error 字段");
+}
