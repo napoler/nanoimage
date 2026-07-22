@@ -2,6 +2,7 @@
 change: comprehensive-defect-remediation
 design-doc: docs/superpowers/specs/2026-07-22-comprehensive-defect-remediation-design.md
 base-ref: da63d9d6059b84f28d8064b72fdeee455ce36285
+archived-with: 2026-07-22-comprehensive-defect-remediation
 ---
 
 # 综合缺陷修复 — 实施计划

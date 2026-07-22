@@ -2,6 +2,8 @@
 comet_change: comprehensive-defect-remediation
 role: technical-design
 canonical_spec: openspec
+archived-with: 2026-07-22-comprehensive-defect-remediation
+status: final
 ---
 
 # 综合缺陷修复 — Design Doc
