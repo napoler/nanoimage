@@ -7,5 +7,4 @@ nanoimage (0.1.0) unstable; urgency=medium
  * Batch processing with configurable workers
  * Config persistence and import/export
 
-
  -- Terry <napoler@gmail.com> Sat, 26 Jul 2026 20:50:00 +0800
