@@ -26,7 +26,6 @@ enum WorkerMsg {
 }
 
 /// 主应用
-///
 /// GUI 应用程序的核心状态，包含配置、文件面板、进度面板和日志面板
 pub struct NanoImageApp {
     config: OptimizerConfig,
@@ -108,7 +107,9 @@ impl NanoImageApp {
 
     /// 保存配置到文件
     fn save_config(&self) {
-        config_persistence::save_config(&self.config);
+        if let Err(e) = config_persistence::save_config(&self.config) {
+            tracing::warn!("自动保存配置失败: {}", e);
+        }
     }
 
     /// 处理文件 (使用 channel 与后台线程通信，支持取消)
@@ -346,8 +347,6 @@ impl eframe::App for NanoImageApp {
                         self.show_completion_dialog = false;
                     }
                 });
-
-            self.show_completion_dialog = false;
         }
 
         egui::CentralPanel::default().show(ctx, |ui| {
@@ -468,37 +467,23 @@ mod channel_tests {
     }
 
     /// 测试 HOME 缺失时 config_dir() 不 panic：路径退化为 `/.config/nanoimage` 但 `save_config` 内的
-    /// create_dir_all 会失败。这是预期行为，关键是确认函数不 panic 并明确 emit warn。
     #[test]
     fn test_config_persistence_home_unset_safe() {
         use std::sync::{Arc, Mutex};
 
-        // 保存原 HOME，避免影响其它测试与下游
         let original_home = std::env::var_os("HOME");
+        std::env::set_var("HOME", "");
 
-        // 注意：直接 `set_var("HOME", "")` 在并发测试中可能影响其它线程，
-        // 但 cargo test 默认串行运行每个 .rs 的 #[test]。本测试与其它 GUI 测试间
-        // 不共享 HOME 状态——将 HOME 设为空字符串并 restore。
-        // SAFETY: 仅限测试，串行执行，且立即恢复。
-        unsafe {
-            std::env::set_var("HOME", "");
-        }
-
-        // 调用 save_config 应不 panic。dirs::config_dir() 在 HOME 为空时通常返回 None，
-        // 我们 fall through 到 .config/nanoimage 路径，create_dir_all("/") 通常 EACCES。
-        // 我们断言至少 save_config 调用完成（无 panic）；具体错误由内部 warn 处理。
         let cfg = nanoimage_core::OptimizerConfig::default();
-        super::config_persistence::save_config(&cfg);
-
-        // 恢复 HOME
-        // SAFETY: 见上
-        unsafe {
-            match original_home {
-                Some(v) => std::env::set_var("HOME", v),
-                None => std::env::remove_var("HOME"),
-            }
+        if let Err(e) = super::config_persistence::save_config(&cfg) {
+            tracing::warn!("test save failed: {}", e);
         }
-        // 调用静默成功即视为 PASS
+
+        match original_home {
+            Some(v) => std::env::set_var("HOME", v),
+            None => std::env::remove_var("HOME"),
+        }
+
         let _ = Arc::new(Mutex::new(()));
     }
 }

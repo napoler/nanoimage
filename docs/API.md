@@ -180,5 +180,5 @@ impl Progress {
 pub fn format_size(bytes: u64) -> String;
 
 /// 从扩展名检测图像格式
-pub fn detect_format(path: &Path) -> ImageFormat;
+impl ImageFormat { pub fn from_path(path: &Path) -> Self; }
 ```

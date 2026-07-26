@@ -166,9 +166,9 @@ impl SettingsPanel {
                             };
                             tracing::info!("导入配置成功: {}", path.display());
                             // 保存导入的配置
-                            let _ = self.save_config_to_path(&path);
-                        } else {
-                            tracing::error!("导入配置失败: {}", path.display());
+                            if let Err(e) = self.save_config_to_path(&path) {
+                                tracing::warn!("导入配置后保存失败: {}", e);
+                            }
                         }
                     }
                 }

@@ -208,9 +208,9 @@ impl BatchProcessor {
                     total,
                     current_file: file
                         .file_name()
-                        .unwrap_or_default()
-                        .to_string_lossy()
-                        .to_string(),
+                        .map(|n| n.to_string_lossy().to_string())
+                        .unwrap_or_default(),
+
                     bytes_processed: result.original_size,
                     bytes_saved: result.savings.max(0) as u64,
                 };

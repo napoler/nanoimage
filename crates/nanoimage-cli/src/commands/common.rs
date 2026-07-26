@@ -22,9 +22,12 @@ pub fn load_config() -> OptimizerConfig {
         }
     }
 
-    // 回退到当前目录
-    if let Ok(config) = OptimizerConfig::load_from_file(&PathBuf::from("config.json")) {
-        return config;
+    // 回退到当前目录 (仅当文件存在时)
+    let cwd_config = PathBuf::from("config.json");
+    if cwd_config.exists() {
+        if let Ok(config) = OptimizerConfig::load_from_file(&cwd_config) {
+            return config;
+        }
     }
 
     OptimizerConfig::default()

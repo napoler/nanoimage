@@ -26,7 +26,6 @@ pub struct Args {
 }
 
 /// 执行压缩命令
-///
 /// 验证输入文件存在性，加载配置，调用 Optimizer 处理单个文件
 pub fn execute(args: Args) -> Result<()> {
     if !args.input.exists() {

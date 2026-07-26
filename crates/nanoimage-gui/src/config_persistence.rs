@@ -2,6 +2,7 @@
 //!
 //! 负责将 OptimizerConfig 保存到系统配置目录下的 nanoimage 子目录
 
+use anyhow::Context;
 use nanoimage_core::OptimizerConfig;
 use std::path::{Path, PathBuf};
 
@@ -44,21 +45,19 @@ pub fn load_config() -> OptimizerConfig {
 
 /// 保存配置到文件
 ///
-/// 如果保存失败，仅记录错误，不 panic
-pub fn save_config(config: &OptimizerConfig) {
+/// 返回 Result 以便调用方处理错误（不静默丢弃）
+pub fn save_config(config: &OptimizerConfig) -> anyhow::Result<()> {
     let path = config_path();
 
     // 确保目录存在
     if let Some(parent) = path.parent() {
-        if let Err(e) = std::fs::create_dir_all(parent) {
-            tracing::error!("创建配置目录失败: {}", e);
-            return;
-        }
+        std::fs::create_dir_all(parent)
+            .with_context(|| format!("创建配置目录失败: {}", parent.display()))?;
     }
 
-    if let Err(e) = config.save_to_file(&path) {
-        tracing::error!("保存配置失败: {}", e);
-    }
+    config
+        .save_to_file(&path)
+        .with_context(|| format!("保存配置失败: {}", path.display()))
 }
 
 /// 从指定路径加载配置

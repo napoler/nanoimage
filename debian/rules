@@ -16,6 +16,12 @@ binary: install
 	mkdir -p debian/nanoimage/DEBIAN
 	mkdir -p debian/nanoimage-gui/DEBIAN
 
+	# Generate DEBIAN/control for CLI package
+	printf "Package: nanoimage\nVersion: 0.1.0\nSection: utils\nPriority: optional\nArchitecture: amd64\nDepends:\nMaintainer: Terry <napoler@gmail.com>\nDescription: High-performance image optimizer CLI\n NanoImage is a Rust-based image optimization tool supporting\n JPEG, PNG, WebP compression and format conversion.\n" > debian/nanoimage/DEBIAN/control
+
+	# Generate DEBIAN/control for GUI package
+	printf "Package: nanoimage-gui\nVersion: 0.1.0\nSection: utils\nPriority: optional\nArchitecture: amd64\nDepends: libc6, libxcb-render0, libxcb-shape0, libxcb-xfixes0, libxi6, libxrandr2, libasound2\nMaintainer: Terry <napoler@gmail.com>\nDescription: High-performance image optimizer GUI\n NanoImage GUI is an egui-based desktop application for batch\n image optimization with drag-and-drop support.\n" > debian/nanoimage-gui/DEBIAN/control
+
 	dpkg-deb --build debian/nanoimage ../nanoimage_0.1.0_amd64.deb
 	dpkg-deb --build debian/nanoimage-gui ../nanoimage-gui_0.1.0_amd64.deb
 

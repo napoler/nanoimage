@@ -25,7 +25,6 @@ pub struct Args {
 }
 
 /// 执行 config 子命令
-///
 /// 支持 show（显示配置）、reset（重置默认配置）和修改配置项
 pub fn execute(args: Args) -> Result<()> {
     if args.show {

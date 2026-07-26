@@ -43,11 +43,6 @@ pub fn success(msg: &str) {
 }
 
 /// 警告消息 (黄色)
-#[allow(dead_code)]
-pub fn warn(msg: &str) {
-    println_color(Color::Yellow, msg);
-}
-
 /// 错误消息 (红色)
 pub fn error(msg: &str) {
     eprintln!("{}{}{}", Color::Red.as_str(), msg, Color::Reset.as_str());
@@ -65,20 +60,7 @@ pub fn dot() {
 }
 
 /// 进度完成符号 (绿色勾)
-#[allow(dead_code)]
-pub fn checkmark() {
-    print_color(Color::Green, "✓");
-}
-
 /// 文件处理成功
-#[allow(dead_code)]
-pub fn file_success(name: &str, orig_size: &str, new_size: &str, savings: f64) {
-    print!("{} ", Color::Green.as_str());
-    print!("✓ ");
-    print!("{}", Color::Reset.as_str());
-    println!("{} ({} → {}, -{:.1}%)", name, orig_size, new_size, savings);
-}
-
 /// 文件处理失败
 pub fn file_error(name: &str, err: &str) {
     eprint!("{} ", Color::Red.as_str());
