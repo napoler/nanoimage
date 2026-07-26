@@ -251,9 +251,8 @@ fn test_batch_processor_with_config() {
 /// 因此当前会错误地返回 `true`。后续修复应改用严格的后缀匹配规则。
 #[test]
 fn test_is_already_optimized_substring_false() {
-    let result = nanoimage_core::processor::is_already_optimized(std::path::Path::new(
-        "not_optimized.png",
-    ));
+    let result =
+        nanoimage_core::processor::is_already_optimized(std::path::Path::new("not_optimized.png"));
     assert!(
         !result,
         "不真正包含 _optimized 后缀的文件不应被判定为已优化"
@@ -266,8 +265,9 @@ fn test_is_already_optimized_substring_false() {
 /// 配合 `test_is_already_optimized_substring_false` 一同确保边界条件被覆盖。
 #[test]
 fn test_is_already_optimized_suffix_true() {
-    let result =
-        nanoimage_core::processor::is_already_optimized(std::path::Path::new("photo_optimized.jpg"));
+    let result = nanoimage_core::processor::is_already_optimized(std::path::Path::new(
+        "photo_optimized.jpg",
+    ));
     assert!(
         result,
         "photo_optimized.jpg 应被判定为已优化（_optimized 是真正的后缀）"
@@ -287,7 +287,10 @@ fn test_is_already_optimized_bare_suffix_true() {
 fn test_is_already_optimized_no_suffix_false() {
     let result =
         nanoimage_core::processor::is_already_optimized(std::path::Path::new("optimized.png"));
-    assert!(!result, "optimized.png 不含下划线 _optimized 前缀，应判定为未优化");
+    assert!(
+        !result,
+        "optimized.png 不含下划线 _optimized 前缀，应判定为未优化"
+    );
 }
 
 /// 测试 `BatchProcessor::collect_images` 包含 BMP 文件。
@@ -312,7 +315,10 @@ fn test_collect_images_includes_bmp() {
         .collect();
     assert!(names.iter().any(|n| n == "a.jpg"), "应包含 a.jpg");
     assert!(names.iter().any(|n| n == "b.png"), "应包含 b.png");
-    assert!(names.iter().any(|n| n == "c.bmp"), "应包含 c.bmp —— BMP 必须被支持");
+    assert!(
+        names.iter().any(|n| n == "c.bmp"),
+        "应包含 c.bmp —— BMP 必须被支持"
+    );
 }
 
 /// 测试 `process_sync_with_options` 在 skip_failed=true 时，确实丢弃失败结果并准确累加 failed_count。

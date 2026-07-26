@@ -26,7 +26,10 @@ pub fn is_already_optimized(path: &Path) -> bool {
             }
             let prefix = segments[segments.len() - 2];
             // Negation prefixes that should NOT be treated as already optimized
-            !matches!(prefix, "not" | "no" | "un" | "without" | "skip" | "leave" | "keep")
+            !matches!(
+                prefix,
+                "not" | "no" | "un" | "without" | "skip" | "leave" | "keep"
+            )
         })
         .unwrap_or(false)
 }

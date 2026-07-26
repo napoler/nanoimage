@@ -60,15 +60,8 @@ pub fn execute(args: Args) -> Result<()> {
         ));
     } else {
         match &result.error {
-            Some(e) => error(&format!(
-                "✗ 处理失败: {} - {}",
-                args.input.display(),
-                e
-            )),
-            None => error(&format!(
-                "✗ 处理失败: {} - 未知错误",
-                args.input.display()
-            )),
+            Some(e) => error(&format!("✗ 处理失败: {} - {}", args.input.display(), e)),
+            None => error(&format!("✗ 处理失败: {} - 未知错误", args.input.display())),
         }
     }
 

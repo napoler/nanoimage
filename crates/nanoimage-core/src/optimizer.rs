@@ -259,7 +259,8 @@ impl Optimizer {
     /// 处理 BMP — 加载为图像后重新编码为 PNG（保留优化且跨格式）
     fn process_bmp(&self, input: &Path, output: &Path) -> anyhow::Result<()> {
         let img = image::open(input).with_context(|| format!("无法加载 BMP 图像: {:?}", input))?;
-        let file = std::fs::File::create(output).with_context(|| format!("无法创建输出文件: {:?}", output))?;
+        let file = std::fs::File::create(output)
+            .with_context(|| format!("无法创建输出文件: {:?}", output))?;
         let encoder = image::codecs::png::PngEncoder::new_with_quality(
             file,
             image::codecs::png::CompressionType::Default,

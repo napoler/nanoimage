@@ -32,6 +32,9 @@
 | GUI框架 | `egui` + `eframe` | 即时模式跨平台 UI |
 | 异步运行时 | `tokio` | 多线程并发处理 |
 | 配置管理 | `serde` + `serde_json` | 配置序列化 |
+| 目录遍历 | `walkdir` | 递归目录遍历 |
+| 配置目录 | `dirs` | 跨平台配置目录定位 |
+| 文件对话框 | `rfd` | GUI 原生文件选择对话框 |
 
 ### 2.2 不采用方案
 
@@ -47,28 +50,28 @@
 
 ```
 nanoimage/
-├── Cargo.toml          # Workspace 配置
-├── SPEC.md             # 本文档
-├── CONTRIBUTING.md     # 贡献指南
-├── CHANGELOG.md        # 版本变更
+├── Cargo.toml # Workspace 配置
+├── SPEC.md # 本文档
+├── CONTRIBUTING.md # 贡献指南
+├── CHANGELOG.md # 版本变更
 │
 ├── crates/
-│   ├── nanoimage-core/       # 核心库（共享）
+│   ├── nanoimage-core/ # 核心库（共享）
 │   │   ├── Cargo.toml
 │   │   ├── src/
-│   │   │   ├── lib.rs
-│   │   │   ├── optimizer.rs   # 图像优化引擎
-│   │   │   ├── processor.rs   # 批量处理逻辑
-│   │   │   ├── formats.rs     # 格式检测/转换
-│   │   │   └── config.rs      # 配置结构
-│   │   ├── tests/             # 集成测试
-│   │   └── benches/           # 性能基准测试
+│   │   │   ├── lib.rs        # 公共类型导出
+│   │   │   ├── optimizer.rs  # 图像优化引擎 + 格式处理器
+│   │   │   ├── processor.rs  # 批量处理逻辑 + is_already_optimized
+│   │   │   ├── formats.rs    # 格式检测/转换 + ImageInfo
+│   │   │   └── config.rs     # 配置结构
+│   │   ├── tests/            # 集成测试
+│   │   └── benches/          # 性能基准测试
 │   │
-│   ├── nanoimage-cli/         # CLI 工具
+│   ├── nanoimage-cli/ # CLI 工具
 │   │   ├── Cargo.toml
 │   │   └── src/
-│   │       ├── main.rs        # 入口
-│   │       └── commands/      # 子命令
+│   │       ├── main.rs       # 入口
+│   │       └── commands/     # 子命令
 │   │           ├── compress.rs
 │   │           ├── batch.rs
 │   │           ├── convert.rs
@@ -77,50 +80,50 @@ nanoimage/
 │   │           ├── output.rs
 │   │           └── mod.rs
 │   │
-│   └── nanoimage-gui/         # GUI 应用
+│   └── nanoimage-gui/ # GUI 应用
 │       ├── Cargo.toml
 │       └── src/
-│           ├── main.rs        # eframe 入口
-│           ├── lib.rs         # 应用状态 + UI 组合
+│           ├── main.rs          # eframe 入口
+│           ├── lib.rs           # 应用状态 + UI 组合
 │           ├── config_persistence.rs
-│           └── ui/            # UI 组件
+│           └── ui/              # UI 组件
 │               ├── mod.rs
 │               ├── file_panel.rs
 │               ├── settings_panel.rs
 │               ├── progress.rs
 │               └── log_view.rs
 │
-└── .github/workflows/ci.yml   # CI 自动化
+└── .github/workflows/ci.yml # CI 自动化
 ```
 
 ### 3.1 数据流
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│                        nanoimage-gui                        │
-│  ┌─────────┐    ┌─────────────┐    ┌──────────────────┐   │
-│  │ 文件选择 │ -> │ AppState    │ -> │ Worker (tokio)   │   │
-│  │ 拖拽接收 │    │ (文件列表)  │    │ (后台处理)       │   │
-│  └─────────┘    └─────────────┘    └────────┬─────────┘   │
-│                                              │              │
-│  ┌─────────────────────────────────────────────▼─────────┐ │
-│  │                    nanoimage-core                      │ │
-│  │  ┌─────────┐  ┌──────────┐  ┌─────────┐  ┌────────┐ │ │
-│  │  │ image   │  │ oxipng   │  │ mozjpeg │  │ webp   │ │ │
-│  │  │ (加载)  │  │ (PNG)    │  │ (JPG)   │  │ (WebP) │ │ │
-│  │  └─────────┘  └──────────┘  └─────────┘  └────────┘ │ │
-│  └──────────────────────────────────────────────────────┘ │
+│ nanoimage-gui │
+│ ┌─────────┐ ┌─────────────┐ ┌──────────────────┐ │
+│ │ 文件选择 │ -> │ AppState │ -> │ Worker (tokon) │ │
+│ │ 拖拽接收 │ │ (文件列表) │ │ (后台处理) │ │
+│ └─────────┘ └─────────────┘ └────────┬─────────┘ │
+│ │ │ │
+│ ┌─────────────────────────────────────────────▼─────────┐
+│ │ nanoimage-core │
+│ │ ┌─────────┐ ┌──────────┐ ┌─────────┐ ┌────────┐ │ │
+│ │ │ image │ │ oxipng │ │ image │ │ webp │ │ │
+│ │ │ (加载) │ │ (PNG) │ │ (JPG) │ │ (WebP) │ │ │
+│ │ └─────────┘ └──────────┘ └─────────┘ └────────┘ │ │
+│ └──────────────────────────────────────────────────────┘ │
 └─────────────────────────────────────────────────────────────┘
 
 ┌─────────────────────────────────────────────────────────────┐
-│                        nanoimage-cli                        │
-│  $ nanoimage batch -i ./photos -o ./optimized -q 85       │
-│                           │                                │
-│                           ▼                                │
-│  ┌─────────────────────────────────────────────────────┐   │
-│  │                    nanoimage-core                   │   │
-│  │              (与 GUI 完全共享)                       │   │
-│  └─────────────────────────────────────────────────────┘   │
+│ nanoimage-cli │
+│ $ nanoimage batch -i ./photos -o ./optimized -q 85 │ │
+│ │ │
+│ ▼ │
+│ ┌─────────────────────────────────────────────────────┐ │
+│ │ nanoimage-core │ │
+│ │ (与 GUI 完全共享) │ │
+│ └─────────────────────────────────────────────────────┘ │
 └─────────────────────────────────────────────────────────────┘
 ```
 
@@ -128,8 +131,9 @@ nanoimage/
 
 ## 四、核心模块设计
 
-### 4.1 nanoimage-core
+### 4.1 nanoimage-core 类型定义
 
+```rust
 // 核心优化器
 pub struct Optimizer {
     config: OptimizerConfig,
@@ -141,6 +145,12 @@ impl Optimizer {
     pub fn process_file(&self, path: &Path) -> ProcessResult;
     pub fn config(&self) -> &OptimizerConfig;
     pub fn set_config(&mut self, config: OptimizerConfig);
+    fn process_jpeg(&self, input: &Path, output: &Path) -> anyhow::Result<()>;
+    fn process_png(&self, input: &Path, output: &Path) -> anyhow::Result<()>;
+    fn process_webp(&self, input: &Path, output: &Path) -> anyhow::Result<()>;
+    fn process_gif(&self, input: &Path, output: &Path) -> anyhow::Result<()>;
+    fn process_svg(&self, input: &Path, output: &Path) -> anyhow::Result<()>;
+    fn process_bmp(&self, input: &Path, output: &Path) -> anyhow::Result<()>;
 }
 
 // 配置结构
@@ -155,21 +165,27 @@ pub struct OptimizerConfig {
     pub overwrite: bool,
     pub output_dir: Option<PathBuf>,
     pub skip_failed: bool,
-    pub workers: usize,
+    pub workers: usize,  // default: available_parallelism().min(16)
 }
 
 // 质量配置
 #[derive(Serialize, Deserialize)]
 pub struct Quality {
-    pub lossy: u8,     // 有损质量 1-100
-    pub lossless: u8,  // 无损等级 0-8
+    pub lossy: u8,    // 有损质量 1-100 (默认 85)
+    pub lossless: u8, // 无损等级 0-8 (默认 100)
 }
 
 // 压缩模式
 pub enum CompressionMode {
-    Lossy,     // 有损压缩
-    Lossless,  // 无损压缩
-    Smart,     // 自动选择
+    Lossy,    // 有损压缩
+    Lossless, // 无损压缩
+    Smart,    // 根据格式自动选择
+}
+
+// 输出格式
+pub enum OutputFormat {
+    KeepOriginal,  // 保持原格式
+    Jpeg, Png, WebP, Gif,
 }
 
 // 处理结果
@@ -182,33 +198,60 @@ pub struct ProcessResult {
     pub success: bool,
     pub error: Option<String>,
 }
+
+// 检查文件是否已被优化 (segment-based, 否定前缀敏感)
+pub fn is_already_optimized(path: &Path) -> bool;
+
+// 批量处理器（独立于 Optimizer）
+pub struct BatchProcessor {
+    optimizer: Arc<Optimizer>,
+}
+
+impl BatchProcessor {
+    pub fn new(optimizer: Optimizer) -> Self;
+    pub fn with_config(config: OptimizerConfig) -> Self;
+    pub fn process_sync(&self, files: &[PathBuf]) -> Vec<ProcessResult>;
+    pub fn process_sync_with_options(&self, files: &[PathBuf], skip_failed: bool, only_unoptimized: bool) -> (Vec<ProcessResult>, usize);
+    pub fn process_sync_with_progress<F: Fn(Progress)>(&self, files: &[PathBuf], on_progress: F) -> u64;
+    pub fn process_sync_with_results<F: Fn(Progress)>(&self, files: &[PathBuf], on_progress: F) -> (u64, Vec<ProcessResult>);
+    pub async fn process_async(&self, files: &[PathBuf], progress_tx: mpsc::Sender<Progress>) -> Vec<ProcessResult>;
+    pub fn collect_images(dir: &Path, recursive: bool) -> Vec<PathBuf>;
+}
+
+// 进度信息
+pub struct Progress {
+    pub current: usize,
+    pub total: usize,
+    pub current_file: String,
+    pub bytes_processed: u64,
+    pub bytes_saved: u64,
+}
+
+// 图像格式检测
+pub enum ImageFormat { Jpeg, Png, WebP, Gif, Bmp, Svg, Unknown }
+
+// 文件处理状态
+pub enum FileStatus { Pending, Processing, Completed, Skipped, Error(String) }
 ```
 
 ### 4.2 图像处理策略
 
 | 格式 | 策略 |
 |------|------|
-| JPEG | `image` crate `JpegEncoder` |
-| PNG | oxipng 优化 (Zopfli+Delta) |
-| WebP | `webp` crate 编码 |
-| GIF | `image` crate 优化 |
-| SVG | 直通（验证格式后原样复制） |
-| BMP/TIFF | `image` crate 直通 |
+| JPEG | `image` crate `JpegEncoder` + quality |
+| PNG | oxipng optimize_from_memory |
+| WebP | `webp` crate Encoder::from_rgba |
+| GIF | `image` crate 直接保存 |
+| SVG | 验证 `<svg>` 标签后原样复制 |
+| BMP | 加载后重编码为 PNG (PngEncoder + Adaptive filter) |
 
 ### 4.3 并发模型
 
 ```rust
-// 使用 tokio 进行并行处理
-// BatchProcessor 使用 tokio::sync::Semaphore 控制并发
-// async fn process_batch_async 已移至 BatchProcessor
-// pub async fn process_batch_async(
-    files: Vec<PathBuf>,
-    config: &OptimizerConfig,
-    progress_callback: impl Fn(Progress),
-) -> Vec<ProcessResult> {
-    let semaphore = Semaphore::new(config.workers);
-    // 并发处理 + 进度回调
-}
+// BatchProcessor::process_async — tokio 并行处理
+// 使用 Arc<Semaphore> 控制并发数 (config.workers)
+// 每个文件 spawn 独立 task，进度通过 mpsc::Sender<Progress> 传递
+// 返回值: Vec<ProcessResult> (含 panic 安全回退)
 ```
 
 ---
@@ -219,61 +262,64 @@ pub struct ProcessResult {
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│  NanoImage                              [_][□][X]           │
+│ NanoImage [_][□][X] │
 ├─────────────────────────────────────────────────────────────┤
-│  ┌─────────────────────────────────────────────────────┐    │
-│  │                                                      │    │
-│  │              📁 拖拽文件到此处                       │    │
-│  │                                                      │    │
-│  │         [ 添加文件 ]    [ 添加文件夹 ]              │    │
-│  │                                                      │    │
-│  └─────────────────────────────────────────────────────┘    │
-│                                                             │
-│  文件: 12 个 (共 45.2 MB)              [ 清空列表 ]        │
-│                                                             │
-│  ┌─ 设置 ────────────────────────────────────────────────┐  │
-│  │  质量: [=======|=====] 85%   格式: [保持原格式 ▼]   │  │
-│  │  最大尺寸: [ 2048 ] px      线程: [ 8  ▼]           │  │
-│  │  ☑ 保留元数据    ☑ 覆盖源文件    ☐ 无损模式        │  │
-│  └──────────────────────────────────────────────────────┘  │
-│                                                             │
-│  [ ▶ 开始优化 ]                    进度: 45% ████████░░░   │
-│                                                             │
-│  ┌─ 日志 ────────────────────────────────────────────────┐  │
-│  │ 12:30:01 完成 image1.jpg (2.1MB → 890KB, -58%)      │  │
-│  │ 12:30:02 完成 image2.png (5.4MB → 1.2MB, -78%)     │  │
-│  │ 12:30:03 跳过 image3.gif (已优化)                   │  │
-│  └──────────────────────────────────────────────────────┘  │
+│ ┌─────────────────────────────────────────────────────┐ │
+│ │ │ │
+│ │ 📁 拖拽文件到此处 │ │
+│ │ │ │
+│ │ [ 添加文件 ] [ 添加文件夹 ] │ │
+│ │ │ │
+│ └─────────────────────────────────────────────────────┘ │
+│ │
+│ 文件: 12 个 (共 45.2 MB) [ 清空列表 ] │
+│ │
+│ ┌─ 设置 ────────────────────────────────────────────────┐ │
+│ │ 质量: [=======|=====] 85% 格式: [保持原格式 ▼] │ │
+│ │ 最大尺寸: [ 2048 ] px 线程: [ 8 ▼] │ │
+│ │ ☑ 保留元数据 ☑ 覆盖源文件 ☐ 无损模式 │ │
+│ └──────────────────────────────────────────────────────┘ │
+│ │
+│ [ ▶ 开始优化 ] 进度: 45% ████████░░░ │ │
+│ │
+│ ┌─ 日志 ────────────────────────────────────────────────┐ │
+│ │ 12:30:01 完成 image1.jpg (2.1MB → 890KB, -58%) │ │
+│ │ 12:30:02 完成 image2.png (5.4MB → 1.2MB, -78%) │ │
+│ │ 12:30:03 跳过 image3.gif (已优化) │ │
+│ └──────────────────────────────────────────────────────┘ │
 └─────────────────────────────────────────────────────────────┘
 ```
 
 ### 5.2 状态管理
 
-egui 是即时模式，状态驱动 UI：
-
 ```rust
-struct AppState {
-    files: Vec<FileEntry>,           // 文件列表
-    config: OptimizerConfig,         // 当前配置
-    processing: ProcessingState,     // 处理状态
-    log_entries: Vec<LogEntry>,      // 日志
-    theme: Theme,                    // 主题
-}
+pub struct NanoImageApp {
+    config: OptimizerConfig,
+    file_panel: FilePanel,
+    settings_panel: SettingsPanel,
+    progress_panel: ProgressPanel,
+    log_panel: LogPanel,
 
-struct FileEntry {
-    path: PathBuf,
-    status: FileStatus,  // Pending/Processing/Done/Skipped/Error
-    original_size: u64,
-    new_size: Option<u64>,
-}
+    // 处理状态
+    processing: bool,
+    progress: f32,
+    current_file: String,
 
-enum ProcessingState {
-    Idle,
-    Running { progress: f32, current_file: String },
-    Cancelled,
-    Completed { total_saved: u64 },
+    // worker 线程 channel
+    worker_rx: Option<Receiver<WorkerMsg>>,
+    worker_handle: Option<JoinHandle<()>>,
+    cancel_flag: Arc<AtomicBool>,
+
+    // 完成状态
+    show_completion_dialog: bool,
+    total_saved_bytes: u64,
+
+    // 配置防抖保存
+    config_dirty: bool,
 }
 ```
+
+快捷键: Ctrl+Enter (开始), Ctrl+O (添加文件), Esc (取消)
 
 ---
 
@@ -354,7 +400,7 @@ rustflags = ["-C", "target-feature=-crt-static"]
 
 ---
 
-## 九、实现计划 (20次迭代)
+## 九、实现计划
 
 | 迭代 | 任务 | 验证方式 |
 |------|------|----------|

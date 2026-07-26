@@ -197,8 +197,5 @@ fn test_bmp_corrupt_fails() {
         "损坏的 BMP 文件应返回失败，actual error: {:?}",
         result.error
     );
-    assert!(
-        result.error.is_some(),
-        "失败结果应包含错误信息"
-    );
+    assert!(result.error.is_some(), "失败结果应包含错误信息");
 }
