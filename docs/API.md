@@ -91,9 +91,13 @@ impl ProcessResult {
 pub struct OptimizerConfig {
     pub mode: CompressionMode,
     pub quality: Quality,
+    /// 最大宽度 (None = 不限制) - 暂未实现，保留用于未来功能
     pub max_width: Option<u32>,
+    /// 最大高度 (None = 不限制) - 暂未实现，保留用于未来功能  
     pub max_height: Option<u32>,
+    /// 输出格式 - 暂未在批量处理中实现格式覆盖功能
     pub format: OutputFormat,
+    /// 保留元数据 - 暂未实现，保留用于未来功能
     pub preserve_metadata: bool,
     pub overwrite: bool,
     pub output_dir: Option<PathBuf>,

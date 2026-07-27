@@ -46,7 +46,9 @@ impl From<ConvertFormat> for OutputFormat {
 
 pub fn execute(args: Args) -> Result<()> {
     let mut config = load_config();
-    config.quality.lossy = args.quality;
+    // Normalize quality values to valid ranges
+    config.quality = config.quality.normalize();
+    config.quality.lossy = args.quality.clamp(1, 100);
     config.format = args.format.into();
 
     // 设置输出路径

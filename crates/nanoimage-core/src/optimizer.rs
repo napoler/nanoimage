@@ -164,9 +164,7 @@ impl Optimizer {
     fn process_jpeg(&self, input: &Path, output: &Path) -> anyhow::Result<()> {
         let img = image::open(input).with_context(|| format!("无法加载图像: {:?}", input))?;
 
-        if let Some(parent) = output.parent() {
-            std::fs::create_dir_all(parent)?;
-        }
+        // Output directory already created by process_file
 
         let quality = self.config.effective_quality();
 
@@ -179,17 +177,16 @@ impl Optimizer {
 
     /// 处理 PNG
     fn process_png(&self, input: &Path, output: &Path) -> anyhow::Result<()> {
-        if let Some(parent) = output.parent() {
-            std::fs::create_dir_all(parent)?;
-        }
+        // Ensure output parent directory exists (centralized in process_file)
 
         // 读取原始 PNG 数据
         let png_data = std::fs::read(input).with_context(|| format!("无法读取PNG: {:?}", input))?;
 
-        // oxipng 优化
+        // oxipng 优化 - Uses default settings for now
+        // Note: quality.lossless is tracked but not yet mapped to oxipng options
         let opts = oxipng::Options::default();
-        let optimized =
-            oxipng::optimize_from_memory(&png_data, &opts).with_context(|| "oxipng 优化失败")?;
+        let optimized = oxipng::optimize_from_memory(&png_data, &opts)
+            .with_context(|| "oxipng 优化失败")?;
 
         std::fs::write(output, optimized)?;
 
@@ -200,9 +197,7 @@ impl Optimizer {
     fn process_webp(&self, input: &Path, output: &Path) -> anyhow::Result<()> {
         let img = image::open(input).with_context(|| format!("无法加载图像: {:?}", input))?;
 
-        if let Some(parent) = output.parent() {
-            std::fs::create_dir_all(parent)?;
-        }
+        // Output directory already created by process_file
 
         let quality = self.config.effective_quality();
         let rgba = img.to_rgba8();
@@ -221,9 +216,7 @@ impl Optimizer {
     fn process_gif(&self, input: &Path, output: &Path) -> anyhow::Result<()> {
         let img = image::open(input).with_context(|| format!("无法加载图像: {:?}", input))?;
 
-        if let Some(parent) = output.parent() {
-            std::fs::create_dir_all(parent)?;
-        }
+        // Output directory already created by process_file
 
         img.save(output)?;
 
@@ -231,6 +224,8 @@ impl Optimizer {
     }
 
     /// 处理 SVG — 验证内容有效性后复制
+    /// Note: SVG optimization requires resvg which is not currently integrated.
+    /// This implementation validates the SVG and performs a copy-only operation.
     fn process_svg(&self, input: &Path, output: &Path) -> anyhow::Result<()> {
         // 读取 SVG 内容并验证它是有效的 XML/SVG
         let svg_content = std::fs::read_to_string(input)
@@ -249,9 +244,7 @@ impl Optimizer {
             return Err(anyhow::anyhow!("文件不是有效的 SVG: 缺少 <svg> 根元素"));
         }
 
-        if let Some(parent) = output.parent() {
-            std::fs::create_dir_all(parent)?;
-        }
+        // Output directory should already be created by process_file
         std::fs::copy(input, output)?;
         Ok(())
     }

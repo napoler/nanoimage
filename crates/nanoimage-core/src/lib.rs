@@ -8,7 +8,7 @@ pub mod optimizer;
 pub mod processor;
 
 pub use config::{CompressionMode, OptimizerConfig, OutputFormat, Quality};
-pub use formats::format_size;
+pub use formats::{format_name, format_size};
 pub use optimizer::{Optimizer, ProcessResult};
 pub use processor::{BatchProcessor, Progress};
 

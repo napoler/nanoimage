@@ -53,12 +53,13 @@ impl SettingsPanel {
                 ui.label(format!("{}%", self.config.quality.lossy));
             });
 
-            // 无损质量
+            // 无损质量 (oxipng level, mapped from 0-100%)
             ui.horizontal(|ui| {
                 ui.label("无损质量:");
-                let mut lossless = self.config.quality.lossless as f32;
-                ui.add(egui::Slider::new(&mut lossless, 50.0..=100.0).text("%"));
-                self.config.quality.lossless = lossless as u8;
+                // Store as 0-100% internally, display as percentage
+                let mut lossless_pct = self.config.quality.lossless as f32;
+                ui.add(egui::Slider::new(&mut lossless_pct, 0.0..=100.0).text("%"));
+                self.config.quality.lossless = lossless_pct as u8;
                 ui.label(format!("{}%", self.config.quality.lossless));
             });
 

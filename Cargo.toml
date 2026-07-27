@@ -21,7 +21,7 @@ categories = ["multimedia::images", "command-line-utilities"]
 image = "0.25"
 oxipng = "9"
 webp = "0.3"
-resvg = "0.44"
+# Note: resvg was removed from dependencies - SVG optimization is copy-only only; resvg integration pending future implementation
 
 # Async
 tokio = { version = "1", features = ["rt-multi-thread", "sync", "fs"] }

@@ -406,7 +406,7 @@ rustflags = ["-C", "target-feature=-crt-static"]
 |------|------|----------|
 | 0 | ~~Bug 修复 + 警告清理~~ | ~~`cargo build` 零警告, 72 tests pass~~ ✅ |
 | 1 | ~~补充核心测试 (72 tests)~~ | ~~`cargo test` 72 tests pass~~ ✅ |
-| 2 | ~~CLI batch 完善 (--format/--max-width/--max-height/--dry-run/结果表格)~~ | ~~`cargo build` 零警告, 72 tests pass~~ ✅ |
+| 2 | CLI batch 完善 (--format/--dry-run/结果表格)；max_width/max_height 暂未在渲染逻辑中实现 | `cargo build` 零警告, 72 tests pass ✅ (max-width/max-height accepted as args but no effect on processing) |
 | 3 | ~~GUI 集成完善~~ | ~~处理完成弹窗通知 + 输出目录选择 + 文件列表摘要行 + 跳过失败选项~~ ✅ |
 | 4 | ~~配置持久化~~ | ~~启动时加载上次配置~~ ✅ |
 | 5 | ~~错误处理与用户体验~~ | ~~跳过失败文件选项 + 跳过已优化文件~~ ✅ |

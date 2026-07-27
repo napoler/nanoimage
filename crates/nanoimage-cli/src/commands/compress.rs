@@ -33,7 +33,9 @@ pub fn execute(args: Args) -> Result<()> {
     }
 
     let mut config = load_config();
-    config.quality.lossy = args.quality;
+    // Normalize quality values to valid ranges (lossy: 1-100, lossless: 0-100)
+    config.quality = config.quality.normalize();
+    config.quality.lossy = args.quality.clamp(1, 100);
     config.overwrite = args.overwrite;
 
     if let Some(output) = args.output {

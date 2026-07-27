@@ -136,8 +136,10 @@ fn display_char_width(c: char) -> usize {
 
 pub fn execute(args: Args) -> Result<()> {
     let mut config = load_config();
-    config.quality.lossy = args.quality;
-    config.workers = args.workers;
+    // Normalize quality values and clamp to valid ranges
+    config.quality = config.quality.normalize();
+    config.quality.lossy = args.quality.clamp(1, 100);
+    config.workers = args.workers.max(1).min(16);
     config.overwrite = args.overwrite;
 
     if let Some(output) = &args.output {

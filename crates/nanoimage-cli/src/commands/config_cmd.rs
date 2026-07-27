@@ -57,11 +57,11 @@ pub fn execute(args: Args) -> Result<()> {
     let mut config = load_config();
 
     if let Some(q) = args.quality {
-        config.quality.lossy = q;
+        config.quality.lossy = q.clamp(1, 100);
     }
 
     if let Some(w) = args.workers {
-        config.workers = w;
+        config.workers = w.max(1).min(16);
     }
 
     if let Err(e) = save_config(&config) {

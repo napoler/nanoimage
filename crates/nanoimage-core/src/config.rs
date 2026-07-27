@@ -29,9 +29,10 @@ impl OutputFormat {
 /// 压缩质量配置
 #[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
 pub struct Quality {
-    /// 有损压缩质量 1-100
+    /// 有损压缩质量 1-100 (默认 85)
     pub lossy: u8,
-    /// 无损压缩质量 (用于 PNG)
+    /// 无损压缩等级 0-100 (用于 PNG oxipng, 默认 100)
+    /// Note: oxipng typically uses levels 0-13 where higher = better compression but slower
     pub lossless: u8,
 }
 
@@ -40,6 +41,17 @@ impl Default for Quality {
         Self {
             lossy: 85,
             lossless: 100,
+        }
+    }
+}
+
+impl Quality {
+    /// Ensure quality values are within reasonable bounds
+    /// lossy: clamp to 1-100, lossless: clamp to 0-100 (oxipng level)
+    pub fn normalize(self) -> Self {
+        Self {
+            lossy: self.lossy.clamp(1, 100),
+            lossless: self.lossless.clamp(0, 100),
         }
     }
 }
@@ -54,15 +66,23 @@ pub struct OptimizerConfig {
     #[serde(default)]
     pub quality: Quality,
     /// 最大宽度 (None = 不限制)
+    /// Note: This field is currently not implemented in processing logic.
+    /// Resizing support is pending future implementation.
     #[serde(default)]
     pub max_width: Option<u32>,
     /// 最大高度 (None = 不限制)
+    /// Note: This field is currently not implemented in processing logic.
+    /// Resizing support is pending future implementation.
     #[serde(default)]
     pub max_height: Option<u32>,
     /// 输出格式
+    /// Note: This field is used in convert command but not in optimizer processing.
+    /// Format override during batch processing is pending implementation.
     #[serde(default)]
     pub format: OutputFormat,
     /// 保留元数据
+    /// Note: This field is currently not implemented in processing logic.
+    /// Metadata preservation support is pending future implementation.
     #[serde(default = "default_true")]
     pub preserve_metadata: bool,
     /// 覆盖源文件
