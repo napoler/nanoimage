@@ -3,7 +3,7 @@ use std::io::Write;
 
 /// 输出颜色
 #[derive(Clone, Copy)]
-#[allow(dead_code)]
+#[expect(dead_code)]
 pub enum Color {
     Green,
     Yellow,

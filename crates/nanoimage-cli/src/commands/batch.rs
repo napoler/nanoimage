@@ -135,11 +135,22 @@ fn display_char_width(c: char) -> usize {
 }
 
 pub fn execute(args: Args) -> Result<()> {
+    // Validate input path exists
+    if !args.input.exists() {
+        return Err(anyhow::anyhow!("输入路径不存在: {}", args.input.display()));
+    }
+    // Validate input is a directory (as expected for batch processing)
+    if !args.input.is_dir() {
+        return Err(anyhow::anyhow!("输入路径必须是目录，而不是文件: {}", args.input.display()));
+    }
+
     let mut config = load_config();
     // Normalize quality values and clamp to valid ranges
     config.quality = config.quality.normalize();
+    // Set both lossy and lossless for consistent behavior regardless of compression mode
     config.quality.lossy = args.quality.clamp(1, 100);
-    config.workers = args.workers.max(1).min(16);
+    config.quality.lossless = args.quality.clamp(1, 100);
+    config.workers = args.workers.clamp(1, 16);
     config.overwrite = args.overwrite;
 
     if let Some(output) = &args.output {

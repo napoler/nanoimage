@@ -156,7 +156,10 @@ impl OptimizerConfig {
     }
 
     /// 获取有效质量值
-    pub fn effective_quality(&self) -> u8 {
+///
+/// 注意：Smart 模式（智能模式）当前会回退到 lossy 质量的设置。
+/// 未来的实现可能根据图像内容自动在 lossy/lossless 之间选择。
+pub fn effective_quality(&self) -> u8 {
         match self.mode {
             CompressionMode::Lossy => self.quality.lossy,
             CompressionMode::Lossless => self.quality.lossless,

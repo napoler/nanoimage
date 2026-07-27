@@ -93,7 +93,8 @@ impl SettingsPanel {
                         1 => "JPEG",
                         2 => "PNG",
                         3 => "WebP",
-                        _ => "GIF",
+                        4 => "GIF",  // Explicitly map index 4 to GIF
+                        _ => "GIF",   // Fallback for unexpected indices (should never occur)
                     })
                     .show_ui(ui, |ui| {
                         ui.selectable_value(&mut self.format_index, 0, "保持原格式");
@@ -107,7 +108,8 @@ impl SettingsPanel {
                     1 => OutputFormat::Jpeg,
                     2 => OutputFormat::Png,
                     3 => OutputFormat::WebP,
-                    _ => OutputFormat::Gif,
+                    4 => OutputFormat::Gif,  // Explicitly map index 4 to GIF
+                    _ => OutputFormat::Gif, // Fallback for unexpected indices (should never occur)
                 };
             });
 
@@ -158,6 +160,7 @@ impl SettingsPanel {
                                 OutputFormat::Jpeg => 1,
                                 OutputFormat::Png => 2,
                                 OutputFormat::WebP => 3,
+                                // Note: BMP/Svg not supported in OutputFormat yet; Gif maps to index 4
                                 OutputFormat::Gif => 4,
                             };
                             self.mode_index = match self.config.mode {

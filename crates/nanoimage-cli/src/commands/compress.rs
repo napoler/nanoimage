@@ -31,11 +31,18 @@ pub fn execute(args: Args) -> Result<()> {
     if !args.input.exists() {
         anyhow::bail!("输入文件不存在: {}", args.input.display());
     }
+    if !args.input.is_file() {
+        anyhow::bail!("输入必须是文件，而不是目录: {}", args.input.display());
+    }
 
     let mut config = load_config();
     // Normalize quality values to valid ranges (lossy: 1-100, lossless: 0-100)
     config.quality = config.quality.normalize();
+    // Set both lossy and lossless to ensure correct behavior regardless of compression mode
     config.quality.lossy = args.quality.clamp(1, 100);
+    config.quality.lossless = args.quality.clamp(1, 100);
+    // Clamp workers to valid range (1-16) to prevent resource exhaustion
+    config.workers = config.workers.clamp(1, 16);
     config.overwrite = args.overwrite;
 
     if let Some(output) = args.output {

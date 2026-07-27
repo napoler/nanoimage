@@ -70,13 +70,13 @@ impl ImageInfo {
 
     /// 从 SVG 内容中提取指定属性的数值（去除单位）
     fn extract_svg_attr(svg: &str, attr: &str) -> Option<u32> {
-        // 查找属性名（不区分大小写）
+        // 查找属性名（不区分大小写），使用统一的 lowercase 字符串
         let lower_svg = svg.to_lowercase();
-        let attr_lower = format!("{}=", attr);
+        let attr_lower = format!("{}=", attr.to_lowercase());
         let pos = lower_svg.find(&attr_lower)?;
 
-        // 从属性名之后开始查找值
-        let after_attr = &svg[pos + attr_lower.len()..];
+        // 从属性名之后开始查找值（在 lowercase 版本上，保持一致性）
+        let after_attr = &lower_svg[pos + attr_lower.len()..];
 
         // 跳过引号
         let rest = after_attr.trim_start();

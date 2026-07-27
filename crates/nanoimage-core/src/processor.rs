@@ -253,6 +253,7 @@ impl BatchProcessor {
         let extensions = ["jpg", "jpeg", "png", "webp", "gif", "bmp", "svg"];
 
         if recursive {
+            // max_depth=32: 防止意外递归过深导致无限循环或资源耗尽（ symlink 环或非常大目录树）
             for entry in walkdir::WalkDir::new(dir)
                 .follow_links(true)
                 .max_depth(32)
@@ -261,8 +262,8 @@ impl BatchProcessor {
             {
                 if entry.file_type().is_file() {
                     if let Some(ext) = entry.path().extension() {
-                        if extensions.contains(&ext.to_str().unwrap_or("").to_lowercase().as_str())
-                        {
+                        let ext_str = ext.to_str().unwrap_or("");
+                        if extensions.iter().any(|&e| e.to_lowercase() == ext_str.to_lowercase()) {
                             images.push(entry.path().to_path_buf());
                         }
                     }
@@ -274,9 +275,8 @@ impl BatchProcessor {
                     let path = entry.path();
                     if path.is_file() {
                         if let Some(ext) = path.extension() {
-                            if extensions
-                                .contains(&ext.to_str().unwrap_or("").to_lowercase().as_str())
-                            {
+                            let ext_str = ext.to_str().unwrap_or("");
+                            if extensions.iter().any(|&e| e.to_lowercase() == ext_str.to_lowercase()) {
                                 images.push(path);
                             }
                         }

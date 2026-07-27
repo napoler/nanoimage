@@ -146,11 +146,7 @@ fn test_optimizer_config_workers() {
 }
 
 /// 测试 BMP 文件经过 Optimizer 应能被成功处理。
-///
-/// 期望失败原因：当前 `Optimizer::process_file` 的 match 分支未覆盖 `ImageFormat::Bmp`，
-/// BMP 格式的文件会落入 `_ => anyhow::anyhow!("不支持的格式: {:?}", format)` 分支，
-/// 进而 `result.success == false` 且 `result.error` 含 "不支持的格式"。
-/// 后续应新增 `ImageFormat::Bmp => self.process_bmp(...)` 分支。
+/// BMP 格式通过 process_bmp() 方法支持，将 BMP 转换为 PNG 进行优化。
 #[test]
 fn test_bmp_compress() {
     let temp_dir = tempfile::tempdir().unwrap();
@@ -171,8 +167,7 @@ fn test_bmp_compress() {
 
     assert!(
         result.success,
-        "BMP 处理当前应失败（_ 分支未覆盖 BMP），实际错误: {:?}",
-        result.error
+        "BMP 处理应成功（process_bmp 已实现）"
     );
     assert!(result.output_path.exists(), "BMP 输出文件应存在");
     assert!(result.new_size > 0, "BMP 输出文件大小应大于 0");
@@ -180,9 +175,8 @@ fn test_bmp_compress() {
 
 /// 测试损坏的 BMP 文件应被报告为失败。
 ///
-/// 注：在当前实现下，由于 BMP 落入 "_" 分支，无论 BMP 内容是否合法，
-/// 都会被报为 "不支持的格式"（与 `test_bmp_compress` 一致）。
-/// 后续实现 `process_bmp` 后，本测试仍应通过（损坏字节应被 image::open 拒绝）。
+/// Note: BMP format is now fully supported via process_bmp(). This test ensures
+/// invalid/non-BMP files are properly rejected by image::open().
 #[test]
 fn test_bmp_corrupt_fails() {
     let temp_dir = tempfile::tempdir().unwrap();

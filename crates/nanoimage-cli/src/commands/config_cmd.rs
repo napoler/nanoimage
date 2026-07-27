@@ -61,7 +61,7 @@ pub fn execute(args: Args) -> Result<()> {
     }
 
     if let Some(w) = args.workers {
-        config.workers = w.max(1).min(16);
+        config.workers = w.clamp(1, 16);
     }
 
     if let Err(e) = save_config(&config) {

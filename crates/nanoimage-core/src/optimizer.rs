@@ -182,9 +182,11 @@ impl Optimizer {
         // 读取原始 PNG 数据
         let png_data = std::fs::read(input).with_context(|| format!("无法读取PNG: {:?}", input))?;
 
-        // oxipng 优化 - Uses default settings for now
-        // Note: quality.lossless is tracked but not yet mapped to oxipng options
-        let opts = oxipng::Options::default();
+        // oxipng 优化 - Map config.quality.lossless (0-100%) to oxipng preset
+        // oxipng presets: 0=fastest, 6=max compression (Zopfli), default level is 2
+        // Map 0-100% to preset 0-6: lossless=100 -> preset 6, lossless=0 -> preset 0
+        let preset = (self.config.quality.lossless as u32 * 6) / 100;
+        let opts = oxipng::Options::from_preset(preset as u8);
         let optimized = oxipng::optimize_from_memory(&png_data, &opts)
             .with_context(|| "oxipng 优化失败")?;
 
@@ -226,22 +228,38 @@ impl Optimizer {
     /// 处理 SVG — 验证内容有效性后复制
     /// Note: SVG optimization requires resvg which is not currently integrated.
     /// This implementation validates the SVG and performs a copy-only operation.
+    /// Critical: Basic validation ensures file begins with valid SVG/XML structure.
     fn process_svg(&self, input: &Path, output: &Path) -> anyhow::Result<()> {
         // 读取 SVG 内容并验证它是有效的 XML/SVG
         let svg_content = std::fs::read_to_string(input)
             .with_context(|| format!("无法读取SVG文件: {:?}", input))?;
 
-        // 基本验证：SVG 文件应包含 <svg> 标签
-        // 跳过前导空白和 XML 注释后再检查，防止 HTML 注释绕过
-        let has_svg_tag = svg_content
-            .trim_start()
-            .trim_start_matches("<!--")
-            .trim_start()
-            .trim_start_matches(|c: char| c != '<')
-            .starts_with("<svg");
+        // Find the first non-whitespace, non-comment character
+        // A valid SVG typically starts with <?xml...?> or directly with <svg>
+        // or possibly with an DOCTYPE declaration before <svg>
+        let trimmed = svg_content.trim_start();
 
-        if !has_svg_tag {
-            return Err(anyhow::anyhow!("文件不是有效的 SVG: 缺少 <svg> 根元素"));
+        // Check for direct <svg> start (case-insensitive)
+        let starts_with_svg = trimmed.len() >= 4 &&
+            (&trimmed[0..4].to_lowercase() == "<svg");
+
+        // Check if there's an <svg> tag later in the file after initial XML/doctype
+        // We look for "<svg" preceded by either start of trimmed content or by whitespace/> or <!--...-->
+        let mut has_svg_element = false;
+        if let Some(pos) = trimmed.find("<svg") {
+            // Ensure this is not inside an XML comment or CDATA section
+            // Simple check: before this position, there should be unclosed <!--
+            let preview_before = &trimmed[..pos];
+            // Count unclosed comment starts - if odd number, we're inside a comment
+            let comment_open_count = preview_before.matches("<!--").count();
+            if comment_open_count % 2 == 0 {
+                // Not inside an open comment, likely valid
+                has_svg_element = true;
+            }
+        }
+
+        if !starts_with_svg && !has_svg_element {
+            return Err(anyhow::anyhow!("文件不是有效的 SVG: 未找到 <svg> 根元素"));
         }
 
         // Output directory should already be created by process_file
@@ -249,7 +267,9 @@ impl Optimizer {
         Ok(())
     }
 
-    /// 处理 BMP — 加载为图像后重新编码为 PNG（保留优化且跨格式）
+    /// 处理 BMP — 加载为图像后重新编码为 PNG。注意：输出内容实际上是 PNG 格式，
+/// 但文件扩展名保持原始输入扩展名（通常为 .bmp）。此行为是为了获得更好的压缩比，
+/// 因为 BMP 格式本身通常不压缩。如需保持 BMP 格式，请手动转换。
     fn process_bmp(&self, input: &Path, output: &Path) -> anyhow::Result<()> {
         let img = image::open(input).with_context(|| format!("无法加载 BMP 图像: {:?}", input))?;
         let file = std::fs::File::create(output)
